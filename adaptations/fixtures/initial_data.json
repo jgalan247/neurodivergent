@@ -1,0 +1,260 @@
+[
+  {
+    "model": "adaptations.contentrule",
+    "pk": "11111111-1111-1111-1111-111111111101",
+    "fields": {
+      "rule_type": "never_answer",
+      "prompt_text": "NEVER provide answers to questions. Your role is to adapt the FORMAT and LANGUAGE, not to solve problems.",
+      "is_active": true
+    }
+  },
+  {
+    "model": "adaptations.contentrule",
+    "pk": "11111111-1111-1111-1111-111111111102",
+    "fields": {
+      "rule_type": "never_add_info",
+      "prompt_text": "NEVER add new factual information that wasn't in the original. You may add structural elements (headers, prompts) but not new content.",
+      "is_active": true
+    }
+  },
+  {
+    "model": "adaptations.contentrule",
+    "pk": "11111111-1111-1111-1111-111111111103",
+    "fields": {
+      "rule_type": "preserve_quotations",
+      "prompt_text": "Preserve ALL quoted text exactly as written. Do not paraphrase or simplify text within quotation marks.",
+      "is_active": true
+    }
+  },
+  {
+    "model": "adaptations.contentrule",
+    "pk": "11111111-1111-1111-1111-111111111104",
+    "fields": {
+      "rule_type": "preserve_maths",
+      "prompt_text": "Preserve ALL mathematical symbols, equations, and formulas exactly. Do not convert or simplify mathematical notation.",
+      "is_active": true
+    }
+  },
+  {
+    "model": "adaptations.subjectterms",
+    "pk": "22222222-2222-2222-2222-222222222201",
+    "fields": {
+      "subject": "mathematics",
+      "terms": ["perimeter", "area", "volume", "radius", "diameter", "circumference", "fraction", "numerator", "denominator", "integer", "decimal", "equation", "formula", "variable", "coefficient", "constant", "parallel", "perpendicular", "adjacent", "hypotenuse", "mean", "median", "mode", "range", "probability", "ratio", "proportion", "percentage", "algebra", "geometry", "trigonometry", "quadratic", "linear", "polynomial", "factor", "multiple", "prime", "composite"]
+    }
+  },
+  {
+    "model": "adaptations.subjectterms",
+    "pk": "22222222-2222-2222-2222-222222222202",
+    "fields": {
+      "subject": "science",
+      "terms": ["atom", "molecule", "electron", "proton", "neutron", "photosynthesis", "respiration", "osmosis", "diffusion", "velocity", "acceleration", "force", "momentum", "energy", "compound", "element", "mixture", "solution", "cell", "nucleus", "chromosome", "gene", "DNA", "evolution", "species", "ecosystem", "habitat", "organism", "tissue", "organ"]
+    }
+  },
+  {
+    "model": "adaptations.subjectterms",
+    "pk": "22222222-2222-2222-2222-222222222203",
+    "fields": {
+      "subject": "english",
+      "terms": ["metaphor", "simile", "personification", "alliteration", "onomatopoeia", "protagonist", "antagonist", "narrator", "character", "stanza", "verse", "rhyme", "rhythm", "imagery", "noun", "verb", "adjective", "adverb", "pronoun", "conjunction", "preposition", "clause", "phrase", "paragraph", "thesis", "analysis", "context", "inference"]
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333301",
+    "fields": {
+      "idiom": "a piece of cake",
+      "literal_meaning": "easy or simple",
+      "category": "food"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333302",
+    "fields": {
+      "idiom": "break a leg",
+      "literal_meaning": "good luck",
+      "category": "body"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333303",
+    "fields": {
+      "idiom": "hit the nail on the head",
+      "literal_meaning": "correct or exactly right",
+      "category": "tools"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333304",
+    "fields": {
+      "idiom": "costs an arm and a leg",
+      "literal_meaning": "very expensive",
+      "category": "body"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333305",
+    "fields": {
+      "idiom": "under the weather",
+      "literal_meaning": "feeling ill",
+      "category": "weather"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333306",
+    "fields": {
+      "idiom": "raining cats and dogs",
+      "literal_meaning": "raining very heavily",
+      "category": "weather"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333307",
+    "fields": {
+      "idiom": "let the cat out of the bag",
+      "literal_meaning": "reveal a secret",
+      "category": "animals"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333308",
+    "fields": {
+      "idiom": "the ball is in your court",
+      "literal_meaning": "it is your turn to act or make a decision",
+      "category": "sports"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333309",
+    "fields": {
+      "idiom": "bite the bullet",
+      "literal_meaning": "accept something difficult or unpleasant",
+      "category": "general"
+    }
+  },
+  {
+    "model": "adaptations.idiomdictionary",
+    "pk": "33333333-3333-3333-3333-333333333310",
+    "fields": {
+      "idiom": "once in a blue moon",
+      "literal_meaning": "very rarely",
+      "category": "nature"
+    }
+  },
+  {
+    "model": "students.adaptationtemplate",
+    "pk": "44444444-4444-4444-4444-444444444401",
+    "fields": {
+      "name": "Dyslexia Standard",
+      "description": "Standard adaptations for students with dyslexia including larger text, dyslexia-friendly fonts, and syllable breaking.",
+      "conditions": ["dyslexia"],
+      "settings": {
+        "font": "opendyslexic",
+        "font_size": 16,
+        "line_spacing": 1.75,
+        "letter_spacing": 10,
+        "background_colour": "cream",
+        "syllable_breaking": true,
+        "key_word_highlighting": true,
+        "reading_year_level": 7,
+        "max_sentence_length": 12,
+        "tts_enabled": true
+      },
+      "is_global": true,
+      "school": null,
+      "created_by": null
+    }
+  },
+  {
+    "model": "students.adaptationtemplate",
+    "pk": "44444444-4444-4444-4444-444444444402",
+    "fields": {
+      "name": "Autism - Full Literal Mode",
+      "description": "Comprehensive adaptations for autistic students with full literal language mode and explicit instructions.",
+      "conditions": ["autism"],
+      "settings": {
+        "literal_language_mode": true,
+        "literal_language_intensity": 10,
+        "explicit_instructions": true,
+        "progress_indicators": true,
+        "section_breaks": true,
+        "timer_display": "hide",
+        "visual_density": 3,
+        "feedback_style": "neutral",
+        "questions_per_section": 3
+      },
+      "is_global": true,
+      "school": null,
+      "created_by": null
+    }
+  },
+  {
+    "model": "students.adaptationtemplate",
+    "pk": "44444444-4444-4444-4444-444444444403",
+    "fields": {
+      "name": "ADHD Support",
+      "description": "Adaptations for students with ADHD focusing on chunking, visual cues, and progress tracking.",
+      "conditions": ["adhd"],
+      "settings": {
+        "questions_per_section": 2,
+        "progress_indicators": true,
+        "key_word_highlighting": true,
+        "reference_panels": true,
+        "visual_density": 3,
+        "section_breaks": true,
+        "encouragement_prompts": true,
+        "numbered_steps": true
+      },
+      "is_global": true,
+      "school": null,
+      "created_by": null
+    }
+  },
+  {
+    "model": "students.adaptationtemplate",
+    "pk": "44444444-4444-4444-4444-444444444404",
+    "fields": {
+      "name": "Anxiety Reduction",
+      "description": "Calming adaptations for students with test anxiety, including encouraging language and hidden timers.",
+      "conditions": ["anxiety"],
+      "settings": {
+        "timer_display": "hide",
+        "feedback_style": "encouraging",
+        "encouragement_prompts": true,
+        "anxiety_reduction": true,
+        "progress_indicators": true,
+        "visual_density": 4
+      },
+      "is_global": true,
+      "school": null,
+      "created_by": null
+    }
+  },
+  {
+    "model": "students.adaptationtemplate",
+    "pk": "44444444-4444-4444-4444-444444444405",
+    "fields": {
+      "name": "Low Reading Age (Year 5)",
+      "description": "Simplified language targeting Year 5 reading level with short sentences and common vocabulary.",
+      "conditions": [],
+      "settings": {
+        "reading_year_level": 5,
+        "max_sentence_length": 10,
+        "vocabulary_simplification": 3,
+        "key_word_highlighting": true,
+        "numbered_steps": true
+      },
+      "is_global": true,
+      "school": null,
+      "created_by": null
+    }
+  }
+]
