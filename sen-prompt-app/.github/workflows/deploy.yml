@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,6 +18,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./sen-prompt-app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +30,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: 'sen-prompt-app/package-lock.json'
 
       - name: Install dependencies
         run: npm ci
@@ -34,12 +39,12 @@ jobs:
         run: npm run build
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './sen-prompt-app/dist'
 
   deploy:
     environment:
