@@ -1,0 +1,880 @@
+import { useState, useEffect } from "react";
+
+const ADAPTATIONS = [
+  { id: "use_icons", label: "Use icons to support key ideas" },
+  { id: "add_visuals", label: "Add diagrams or visuals to explain concepts" },
+  { id: "use_timelines", label: "Use timelines or sequences to show order of events" },
+  { id: "chunk_text", label: "Chunk text into short paragraphs or bullet points" },
+  { id: "extra_spacing", label: "Use extra spacing and clear headings" },
+  { id: "dyslexia_friendly_font", label: "Use a dyslexia-friendly font and high contrast" },
+  { id: "use_colour_coding", label: "Use colour coding for key words/sections" },
+  { id: "short_steps", label: "Break tasks into short, numbered steps" },
+  { id: "timers", label: "Suggest realistic time estimates for each task" },
+  { id: "high_interest_hooks", label: "Use high-interest examples and hooks" },
+  { id: "minimal_text_per_page", label: "Keep minimal text per slide/page" },
+  { id: "checklist_style", label: "Present tasks as a checklist" },
+  { id: "movement_breaks", label: "Build in short movement/brain breaks" },
+  { id: "clear_structure", label: "Use a clear, predictable lesson structure" },
+  { id: "literal_language", label: "Use literal, concrete language (avoid idioms)" },
+  { id: "predictable_layout", label: "Keep layout consistent across pages/slides" },
+  { id: "reduced_sensory_load", label: "Avoid cluttered backgrounds and unnecessary decoration" },
+  { id: "explicit_transitions", label: "Signpost and explain transitions between activities" },
+  { id: "concrete_examples", label: "Use concrete, real-world maths examples" },
+  { id: "visual_maths", label: "Include visual representations of numbers/operations" },
+  { id: "step_by_step_maths", label: "Break calculations into explicit small steps" },
+  { id: "number_lines", label: "Use number lines and manipulatives" }
+];
+
+const CONDITION_DEFAULTS = {
+  Autism: [
+    "clear_structure",
+    "literal_language",
+    "predictable_layout",
+    "reduced_sensory_load",
+    "add_visuals",
+    "use_timelines",
+    "explicit_transitions"
+  ],
+  Dyslexia: [
+    "chunk_text",
+    "extra_spacing",
+    "dyslexia_friendly_font",
+    "use_colour_coding",
+    "use_icons",
+    "add_visuals"
+  ],
+  ADHD: [
+    "short_steps",
+    "timers",
+    "high_interest_hooks",
+    "minimal_text_per_page",
+    "checklist_style",
+    "movement_breaks"
+  ],
+  Dyscalculia: [
+    "concrete_examples",
+    "visual_maths",
+    "step_by_step_maths",
+    "number_lines",
+    "use_colour_coding",
+    "chunk_text",
+    "extra_spacing"
+  ]
+};
+
+const KEY_STAGES = [
+  { value: "KS3", label: "KS3 (11-14 years)" },
+  { value: "KS4", label: "KS4 / GCSE (14-16 years)" }
+];
+
+const READING_LEVELS = [
+  { value: "", label: "No adjustment" },
+  { value: "below", label: "Below expected (simplified)" },
+  { value: "at", label: "At expected level" },
+  { value: "above", label: "Above expected (extended)" }
+];
+
+const LANGUAGES = [
+  { value: "", label: "English (default)" },
+  { value: "Welsh", label: "Welsh / Cymraeg" },
+  { value: "Spanish", label: "Spanish / Español" },
+  { value: "French", label: "French / Français" },
+  { value: "Polish", label: "Polish / Polski" },
+  { value: "Urdu", label: "Urdu / اردو" },
+  { value: "Punjabi", label: "Punjabi / ਪੰਜਾਬੀ" },
+  { value: "Bengali", label: "Bengali / বাংলা" },
+  { value: "Arabic", label: "Arabic / العربية" },
+  { value: "Simplified English", label: "Simplified English (EAL)" }
+];
+
+const QUESTION_TYPES = [
+  { id: "multiple_choice", label: "Multiple choice" },
+  { id: "short_answer", label: "Short answer" },
+  { id: "fill_blanks", label: "Fill in the blanks" },
+  { id: "matching", label: "Matching pairs" },
+  { id: "true_false", label: "True/False" },
+  { id: "extended_response", label: "Extended response" },
+  { id: "scaffolded", label: "Scaffolded questions (with prompts)" }
+];
+
+const PROMPT_TEMPLATES = [
+  {
+    id: "adapt_exam",
+    name: "Adapt an Exam Paper",
+    description: "Modify an existing exam for accessibility",
+    values: {
+      format: "worksheet",
+      lessonObjectives: "Students will demonstrate their understanding through accessible assessment questions."
+    }
+  },
+  {
+    id: "revision_summary",
+    name: "Create Revision Summary",
+    description: "Condensed, accessible revision notes",
+    values: {
+      format: "summary",
+      lessonObjectives: "Students will be able to review and consolidate key concepts from the topic."
+    }
+  },
+  {
+    id: "simplify_textbook",
+    name: "Simplify Textbook Chapter",
+    description: "Make dense text more accessible",
+    values: {
+      format: "summary",
+      lessonObjectives: "Students will understand the main concepts presented in the original text."
+    }
+  },
+  {
+    id: "interactive_worksheet",
+    name: "Interactive Worksheet",
+    description: "Engaging practice activities",
+    values: {
+      format: "worksheet",
+      lessonObjectives: "Students will practice and apply their learning through structured activities."
+    }
+  },
+  {
+    id: "flashcard_set",
+    name: "Flashcard Set",
+    description: "Key terms and concepts for revision",
+    values: {
+      format: "flashcards",
+      lessonObjectives: "Students will memorise and recall key vocabulary and concepts."
+    }
+  }
+];
+
+const FORMAT_RULES = {
+  worksheet: [
+    "Clear numbering for each question/task",
+    "Adequate space for written answers",
+    "Instructions at the start of each section"
+  ],
+  "revision questions": [
+    "Mix of question types (short answer, multiple choice)",
+    "Mark scheme hints where appropriate",
+    "Self-check answers at the end"
+  ],
+  summary: [
+    "Key points in bullet format",
+    "Important terms highlighted",
+    "Maximum 1 page per sub-topic"
+  ],
+  "simplified PowerPoint text": [
+    "One main idea per slide",
+    "Maximum 6 words per bullet point",
+    "Speaker notes for additional context"
+  ],
+  PowerPoint: [
+    "One main idea per slide",
+    "Large, clear fonts (minimum 24pt)",
+    "High contrast colours"
+  ],
+  PDF: [
+    "Accessible formatting with headings",
+    "Alt text for images",
+    "Readable font size (minimum 12pt)"
+  ],
+  flashcards: [
+    "One concept per card",
+    "Question on front, answer on back",
+    "Visual cues where helpful"
+  ]
+};
+
+const ADAPTATION_MAP = ADAPTATIONS.reduce((acc, item) => {
+  acc[item.id] = item;
+  return acc;
+}, {});
+
+const STORAGE_KEY = "sen-prompt-history";
+const MAX_HISTORY = 10;
+
+export default function App() {
+  const [subject, setSubject] = useState("");
+  const [topic, setTopic] = useState("");
+  const [format, setFormat] = useState("");
+  const [conditions, setConditions] = useState([]);
+  const [resource, setResource] = useState(null);
+  const [lessonTitle, setLessonTitle] = useState("");
+  const [lessonObjectives, setLessonObjectives] = useState("");
+  const [keyStage, setKeyStage] = useState("");
+  const [readingLevel, setReadingLevel] = useState("");
+  const [language, setLanguage] = useState("");
+  const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]);
+  const [selectedAdaptations, setSelectedAdaptations] = useState([]);
+  const [prompt, setPrompt] = useState("");
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Load history and dark mode preference from localStorage
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(STORAGE_KEY);
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error("Failed to parse history:", e);
+      }
+    }
+
+    const savedDarkMode = localStorage.getItem("sen-prompt-dark-mode");
+    if (savedDarkMode) {
+      setDarkMode(JSON.parse(savedDarkMode));
+    }
+  }, []);
+
+  // Save dark mode preference
+  useEffect(() => {
+    localStorage.setItem("sen-prompt-dark-mode", JSON.stringify(darkMode));
+  }, [darkMode]);
+
+  const handleConditionToggle = (conditionName) => {
+    setConditions((prev) => {
+      const newConditions = prev.includes(conditionName)
+        ? prev.filter((c) => c !== conditionName)
+        : [...prev, conditionName];
+
+      // Merge adaptations from all selected conditions
+      const mergedAdaptations = new Set();
+      newConditions.forEach((cond) => {
+        if (CONDITION_DEFAULTS[cond]) {
+          CONDITION_DEFAULTS[cond].forEach((a) => mergedAdaptations.add(a));
+        }
+      });
+      setSelectedAdaptations([...mergedAdaptations]);
+
+      return newConditions;
+    });
+  };
+
+  const toggleAdaptation = (id) => {
+    setSelectedAdaptations((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  };
+
+  const toggleQuestionType = (id) => {
+    setSelectedQuestionTypes((prev) =>
+      prev.includes(id) ? prev.filter((q) => q !== id) : [...prev, id]
+    );
+  };
+
+  const applyTemplate = (template) => {
+    if (template.values.format) setFormat(template.values.format);
+    if (template.values.lessonObjectives) setLessonObjectives(template.values.lessonObjectives);
+  };
+
+  const showCopyFeedback = (message) => {
+    setCopyFeedback(message);
+    setTimeout(() => setCopyFeedback(""), 2000);
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    showCopyFeedback("Copied!");
+  };
+
+  const generatePrompt = () => {
+    let adaptedPrompt = `You are a ${subject || "[subject]"} teacher creating an accessible learning resource.\n`;
+
+    if (keyStage) {
+      adaptedPrompt += `Target level: ${keyStage}.\n`;
+    }
+
+    // Reading level adjustment
+    if (readingLevel) {
+      const levelDescriptions = {
+        below: "Adjust reading level BELOW expected for this key stage (simplified vocabulary, shorter sentences)",
+        at: "Maintain reading level AT expected for this key stage",
+        above: "Adjust reading level ABOVE expected for this key stage (extended vocabulary, more complex structures)"
+      };
+      adaptedPrompt += `Reading level: ${levelDescriptions[readingLevel]}.\n`;
+    }
+
+    // Language/translation
+    if (language) {
+      adaptedPrompt += `Output language: Translate/write the resource in ${language}.\n`;
+    }
+
+    if (resource) {
+      adaptedPrompt += `Adapt the attached resource file (${resource.name}) for a neuro-divergent student.\n`;
+    } else {
+      adaptedPrompt += `Topic focus: ${topic || "[topic]"}.\n`;
+      adaptedPrompt += `Create the output in ${format || "[output format]"} format.\n`;
+    }
+
+    const conditionText = conditions.length > 0 ? conditions.join(" + ") : "[condition]";
+    adaptedPrompt += `Student condition(s): ${conditionText}.\n`;
+
+    if (selectedAdaptations.length > 0) {
+      adaptedPrompt += `\nAdaptations to include:\n`;
+      selectedAdaptations.forEach((id) => {
+        const item = ADAPTATION_MAP[id];
+        if (item) {
+          adaptedPrompt += `- ${item.label}\n`;
+        }
+      });
+    }
+
+    // Question types
+    if (selectedQuestionTypes.length > 0) {
+      adaptedPrompt += `\nQuestion types to include:\n`;
+      selectedQuestionTypes.forEach((id) => {
+        const qt = QUESTION_TYPES.find((q) => q.id === id);
+        if (qt) {
+          adaptedPrompt += `- ${qt.label}\n`;
+        }
+      });
+    }
+
+    adaptedPrompt += `\nRewrite following these constraints now.\n\n`;
+    adaptedPrompt += `Lesson Title: ${lessonTitle || "[Insert lesson title here]"}\n`;
+    adaptedPrompt += `Lesson Objectives: ${lessonObjectives || "[Insert lesson objectives here]"}\n\n`;
+
+    adaptedPrompt += `Rules:\n`;
+    adaptedPrompt += `- Language: literal, clear, concise\n`;
+    adaptedPrompt += `- Readability: chunked, well-spaced\n`;
+    adaptedPrompt += `- Keep factual accuracy\n`;
+    adaptedPrompt += `- Use supportive tone\n`;
+    adaptedPrompt += `- Avoid oversimplification of key concepts\n`;
+    adaptedPrompt += `- Maintain assessment objectives if present\n`;
+
+    // Add format-specific rules
+    if (format && FORMAT_RULES[format]) {
+      adaptedPrompt += `\nFormat-specific guidelines (${format}):\n`;
+      FORMAT_RULES[format].forEach((rule) => {
+        adaptedPrompt += `- ${rule}\n`;
+      });
+    }
+
+    setPrompt(adaptedPrompt);
+
+    // Save to history
+    const historyEntry = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      subject,
+      topic,
+      conditions: [...conditions],
+      format,
+      keyStage,
+      lessonTitle,
+      prompt: adaptedPrompt
+    };
+
+    const newHistory = [historyEntry, ...history].slice(0, MAX_HISTORY);
+    setHistory(newHistory);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+  };
+
+  const loadFromHistory = (entry) => {
+    setSubject(entry.subject || "");
+    setTopic(entry.topic || "");
+    setConditions(entry.conditions || []);
+    setFormat(entry.format || "");
+    setKeyStage(entry.keyStage || "");
+    setLessonTitle(entry.lessonTitle || "");
+    setPrompt(entry.prompt || "");
+    setShowHistory(false);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const downloadPrompt = (asJson = false) => {
+    if (!prompt) return;
+
+    if (asJson) {
+      const jsonData = {
+        subject,
+        topic,
+        conditions,
+        format,
+        keyStage,
+        lessonTitle,
+        lessonObjectives,
+        selectedAdaptations,
+        generatedPrompt: prompt,
+        timestamp: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "sen_prompt.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      const blob = new Blob([prompt], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "adapted_prompt.txt";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const resetForm = () => {
+    setSubject("");
+    setTopic("");
+    setFormat("");
+    setConditions([]);
+    setResource(null);
+    setLessonTitle("");
+    setLessonObjectives("");
+    setKeyStage("");
+    setReadingLevel("");
+    setLanguage("");
+    setSelectedQuestionTypes([]);
+    setSelectedAdaptations([]);
+    setPrompt("");
+    // Reset file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = "";
+  };
+
+  const isGenerateDisabled = () => {
+    if (!subject || conditions.length === 0) return true;
+    if (!resource && (!topic || !format)) return true;
+    return false;
+  };
+
+  const bgClass = darkMode ? "bg-slate-900" : "bg-slate-100";
+  const cardClass = darkMode ? "bg-slate-800" : "bg-white";
+  const textClass = darkMode ? "text-slate-100" : "text-slate-900";
+  const textMutedClass = darkMode ? "text-slate-400" : "text-slate-600";
+  const textMutedSmClass = darkMode ? "text-slate-500" : "text-slate-500";
+  const borderClass = darkMode ? "border-slate-600" : "border-slate-200";
+  const inputBgClass = darkMode ? "bg-slate-700 border-slate-600 text-slate-100" : "bg-white border-slate-200";
+  const inputBgMutedClass = darkMode ? "bg-slate-700 border-slate-600" : "bg-slate-50";
+
+  return (
+    <div className={`min-h-screen ${bgClass} p-4 transition-colors duration-200`}>
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Copy feedback toast */}
+        {copyFeedback && (
+          <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
+            {copyFeedback}
+          </div>
+        )}
+
+        <header className="space-y-1 flex justify-between items-start">
+          <div>
+            <h1 className={`text-3xl font-bold ${textClass}`}>
+              SEN Resource Prompt Generator v2
+            </h1>
+            <p className={`text-sm ${textMutedClass} max-w-2xl`}>
+              Build a tailored AI prompt for neuro-divergent learners. Fill in the details,
+              choose adaptations, then copy or download the prompt and paste it into your preferred AI tool
+              along with your resource.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
+            >
+              History ({history.length})
+            </button>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
+              title="Toggle dark mode"
+            >
+              {darkMode ? "☀️ Light" : "🌙 Dark"}
+            </button>
+          </div>
+        </header>
+
+        {/* History panel */}
+        {showHistory && (
+          <div className={`${cardClass} rounded-2xl shadow-md p-4 space-y-3`}>
+            <div className="flex justify-between items-center">
+              <h2 className={`text-lg font-semibold ${textClass}`}>Prompt History</h2>
+              {history.length > 0 && (
+                <button
+                  onClick={clearHistory}
+                  className="text-xs text-red-600 hover:text-red-700"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            {history.length === 0 ? (
+              <p className={`text-sm ${textMutedClass}`}>No saved prompts yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {history.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={`p-3 border ${borderClass} rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700`}
+                    onClick={() => loadFromHistory(entry)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className={`text-sm font-medium ${textClass}`}>
+                          {entry.subject} - {entry.topic || entry.lessonTitle || "Untitled"}
+                        </p>
+                        <p className={`text-xs ${textMutedSmClass}`}>
+                          {entry.conditions?.join(", ")} | {entry.format}
+                        </p>
+                      </div>
+                      <span className={`text-xs ${textMutedSmClass}`}>
+                        {new Date(entry.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Templates */}
+        <div className={`${cardClass} rounded-2xl shadow-md p-4`}>
+          <h2 className={`text-md font-semibold mb-3 ${textClass}`}>Quick Templates</h2>
+          <div className="flex flex-wrap gap-2">
+            {PROMPT_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => applyTemplate(template)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors`}
+                title={template.description}
+              >
+                {template.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <main className="grid lg:grid-cols-3 gap-6 items-start">
+          {/* Left: Form */}
+          <section className={`lg:col-span-2 space-y-4 ${cardClass} rounded-2xl shadow-md p-4`}>
+            <div className="flex justify-between items-center">
+              <h2 className={`text-lg font-semibold ${textClass}`}>Lesson & learner details</h2>
+              <button
+                onClick={resetForm}
+                className={`text-xs ${textMutedClass} hover:text-red-600`}
+              >
+                Reset form
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Subject</label>
+                  <input
+                    className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                    type="text"
+                    placeholder="e.g. Maths, English, History"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Key Stage</label>
+                  <div className={`flex gap-4 p-2 border rounded-xl ${inputBgMutedClass}`}>
+                    {KEY_STAGES.map((ks) => (
+                      <label key={ks.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="keyStage"
+                          value={ks.value}
+                          checked={keyStage === ks.value}
+                          onChange={(e) => setKeyStage(e.target.value)}
+                        />
+                        <span className={textClass}>{ks.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Lesson Title</label>
+                  <input
+                    className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                    type="text"
+                    placeholder="e.g. Fractions with Like Denominators"
+                    value={lessonTitle}
+                    onChange={(e) => setLessonTitle(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Student Condition(s)</label>
+                  <div className={`flex flex-wrap gap-2 p-2 border rounded-xl ${inputBgMutedClass}`}>
+                    {Object.keys(CONDITION_DEFAULTS).map((cond) => (
+                      <label key={cond} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={conditions.includes(cond)}
+                          onChange={() => handleConditionToggle(cond)}
+                          className="rounded"
+                        />
+                        <span className={textClass}>{cond}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                    Select multiple conditions to merge their adaptations.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Lesson Objectives</label>
+                <textarea
+                  className={`w-full p-2 border rounded-xl text-sm min-h-[70px] ${inputBgClass}`}
+                  placeholder="e.g. Students will be able to explain..., label..., solve..., using key vocabulary."
+                  value={lessonObjectives}
+                  onChange={(e) => setLessonObjectives(e.target.value)}
+                />
+              </div>
+
+              {/* Reading Level & Language */}
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Reading Level</label>
+                  <select
+                    className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                    value={readingLevel}
+                    onChange={(e) => setReadingLevel(e.target.value)}
+                  >
+                    {READING_LEVELS.map((level) => (
+                      <option key={level.value} value={level.value}>{level.label}</option>
+                    ))}
+                  </select>
+                  <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                    Adjust vocabulary and sentence complexity.
+                  </p>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Language / Translation</label>
+                  <select
+                    className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                  >
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang.value} value={lang.value}>{lang.label}</option>
+                    ))}
+                  </select>
+                  <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                    Translate output to another language or use simplified English for EAL students.
+                  </p>
+                </div>
+              </div>
+
+              {/* Question Types */}
+              <div>
+                <h3 className={`text-sm font-semibold mb-1 ${textClass}`}>Question Types</h3>
+                <p className={`text-xs ${textMutedSmClass} mb-2`}>
+                  Select which question formats to include in worksheets or assessments.
+                </p>
+                <div className={`flex flex-wrap gap-2 p-2 border rounded-xl ${inputBgMutedClass}`}>
+                  {QUESTION_TYPES.map((qt) => (
+                    <label key={qt.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedQuestionTypes.includes(qt.id)}
+                        onChange={() => toggleQuestionType(qt.id)}
+                        className="rounded"
+                      />
+                      <span className={textClass}>{qt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {!resource && (
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Topic</label>
+                    <input
+                      className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                      type="text"
+                      placeholder="e.g. The Black Plague, The Great Gatsby, Fractions"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Output Format</label>
+                    <select
+                      className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                      value={format}
+                      onChange={(e) => setFormat(e.target.value)}
+                    >
+                      <option value="">Select format...</option>
+                      <option value="worksheet">Worksheet</option>
+                      <option value="revision questions">Revision Questions</option>
+                      <option value="summary">Summary</option>
+                      <option value="simplified PowerPoint text">Simplified PowerPoint text</option>
+                      <option value="PowerPoint">PowerPoint</option>
+                      <option value="PDF">PDF</option>
+                      <option value="flashcards">Flashcards</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Upload Resource (optional)</label>
+                <input
+                  className={`w-full p-2 border rounded-xl text-sm ${inputBgMutedClass}`}
+                  type="file"
+                  onChange={(e) => setResource(e.target.files?.[0] || null)}
+                />
+                {resource && (
+                  <div className={`mt-2 flex items-center gap-2 text-xs ${textMutedClass}`}>
+                    <span className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded">
+                      📎 {resource.name}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setResource(null);
+                        const fileInput = document.querySelector('input[type="file"]');
+                        if (fileInput) fileInput.value = "";
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                  Upload a test, worksheet, PowerPoint or PDF if you want the AI to adapt that specific file.
+                  If you leave this blank, it will generate content based on the topic and format instead.
+                </p>
+              </div>
+
+              <div>
+                <h3 className={`text-sm font-semibold mb-1 ${textClass}`}>Adaptations</h3>
+                <p className={`text-xs ${textMutedSmClass} mb-2`}>
+                  These are the scaffolds you want the AI to build into the resource. Condition profiles
+                  set sensible defaults, but you can customise.
+                </p>
+                <div className={`grid md:grid-cols-2 gap-2 max-h-60 overflow-y-auto border rounded-xl p-2 ${inputBgMutedClass}`}>
+                  {ADAPTATIONS.map((item) => (
+                    <label key={item.id} className={`flex items-start gap-2 text-xs cursor-pointer ${textClass}`}>
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={selectedAdaptations.includes(item.id)}
+                        onChange={() => toggleAdaptation(item.id)}
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  onClick={generatePrompt}
+                  disabled={isGenerateDisabled()}
+                  className={
+                    "px-4 py-2 rounded-xl text-sm font-semibold text-white " +
+                    (isGenerateDisabled()
+                      ? "bg-slate-400 cursor-not-allowed"
+                      : "bg-slate-900 hover:bg-slate-950 dark:bg-slate-600 dark:hover:bg-slate-500")
+                  }
+                >
+                  Generate Prompt
+                </button>
+
+                {prompt && (
+                  <>
+                    <button
+                      onClick={() => downloadPrompt(false)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
+                    >
+                      Download (.txt)
+                    </button>
+                    <button
+                      onClick={() => downloadPrompt(true)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
+                    >
+                      Download (.json)
+                    </button>
+                    <button
+                      onClick={() => copyToClipboard(prompt)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
+                    >
+                      Copy to clipboard
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Right: Rules + prompt preview */}
+          <section className="space-y-4">
+            <div className={`${cardClass} rounded-2xl shadow-md p-4`}>
+              <h2 className={`text-md font-semibold mb-2 ${textClass}`}>
+                Rules / constraints
+                {format && <span className={`text-xs font-normal ${textMutedClass}`}> ({format})</span>}
+              </h2>
+              <ul className={`list-disc list-inside text-xs ${textMutedClass} space-y-1`}>
+                <li>Language: literal, clear, concise</li>
+                <li>Readability: chunked, well-spaced</li>
+                <li>Keep factual accuracy</li>
+                <li>Use supportive tone</li>
+                <li>Avoid oversimplification of key concepts</li>
+                <li>Maintain assessment objectives if present</li>
+              </ul>
+              {format && FORMAT_RULES[format] && (
+                <>
+                  <h3 className={`text-sm font-semibold mt-3 mb-1 ${textClass}`}>Format-specific:</h3>
+                  <ul className={`list-disc list-inside text-xs ${textMutedClass} space-y-1`}>
+                    {FORMAT_RULES[format].map((rule, idx) => (
+                      <li key={idx}>{rule}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+
+            <div className={`${cardClass} rounded-2xl shadow-md p-4 space-y-2`}>
+              <div className="flex justify-between items-center">
+                <h2 className={`text-md font-semibold ${textClass}`}>Generated prompt</h2>
+                {prompt && (
+                  <button
+                    onClick={() => copyToClipboard(prompt)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
+              <textarea
+                className={`w-full min-h-[220px] p-2 border rounded-xl text-[11px] font-mono ${inputBgMutedClass} ${textClass}`}
+                placeholder="Your prompt will appear here after you click 'Generate Prompt'."
+                value={prompt}
+                readOnly
+              />
+            </div>
+          </section>
+        </main>
+
+        <footer className={`text-center text-xs ${textMutedSmClass} pb-4`}>
+          <p>Built for educators supporting neuro-divergent learners</p>
+        </footer>
+      </div>
+    </div>
+  );
+}
