@@ -557,16 +557,16 @@ export default function App() {
     // Set the prompt in state
     setPrompt(adaptedPrompt);
 
-    // Run with Gemini
+    // Run with Claude Haiku
     setIsLoading(true);
     setAiError("");
     setAiResponse("");
 
     try {
-      const response = await callGeminiAPI(adaptedPrompt);
+      const response = await callClaudeAPI(adaptedPrompt);
       setAiResponse(response);
     } catch (error) {
-      setAiError(error.message || "Failed to get response from Gemini");
+      setAiError(error.message || "Failed to get response from Claude");
     } finally {
       setIsLoading(false);
     }
@@ -1682,7 +1682,7 @@ export default function App() {
                       : "bg-emerald-600 hover:bg-emerald-700")
                   }
                 >
-                  {isLoading ? "Generating..." : "Generate with Gemini AI"}
+                  {isLoading ? "Generating..." : "Generate with Claude AI"}
                 </button>
 
                 {prompt && (
@@ -1767,7 +1767,7 @@ export default function App() {
               <h2 className={`text-lg font-semibold ${textClass}`}>
                 AI Response
                 <span className={`text-xs font-normal ${textMutedClass} ml-2`}>
-                  (Gemini)
+                  (Claude Haiku)
                 </span>
               </h2>
               {aiResponse && (
