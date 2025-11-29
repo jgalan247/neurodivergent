@@ -86,6 +86,65 @@ const EXAM_BOARDS = [
   { value: "Edexcel", label: "Edexcel" }
 ];
 
+const EAL_BANDS = [
+  {
+    value: "A",
+    label: "Band A - New to English",
+    guidance: "New to English: Use extensive visual supports, simplified language, bilingual resources where possible, key vocabulary with images, allow responses in first language, focus on survival/social English"
+  },
+  {
+    value: "B",
+    label: "Band B - Early Acquisition",
+    guidance: "Early Acquisition: Pre-teach key vocabulary, use sentence starters and frames, provide graphic organisers, use repetition and modelling, allow extended processing time"
+  },
+  {
+    value: "C",
+    label: "Band C - Developing Competence",
+    guidance: "Developing Competence: Scaffold academic language explicitly, model text structures, provide word banks for subject-specific vocabulary, use collaborative learning activities"
+  },
+  {
+    value: "D",
+    label: "Band D - Competent",
+    guidance: "Competent: Focus on academic register and formal language, develop subject-specific terminology, support with complex text structures and inferential comprehension"
+  },
+  {
+    value: "E",
+    label: "Band E - Fluent",
+    guidance: "Fluent: Support with nuanced academic language, idiomatic expressions, and cultural references that may still present challenges"
+  }
+];
+
+const MOTHER_TONGUES = [
+  { value: "Arabic", label: "Arabic / العربية", scriptType: "non-Latin", languageFamily: "Semitic" },
+  { value: "Bengali", label: "Bengali / বাংলা", scriptType: "non-Latin", languageFamily: "Indo-Aryan" },
+  { value: "Bulgarian", label: "Bulgarian / Български", scriptType: "Cyrillic", languageFamily: "Slavic" },
+  { value: "Cantonese", label: "Cantonese / 廣東話", scriptType: "non-Latin", languageFamily: "Sino-Tibetan" },
+  { value: "French", label: "French / Français", scriptType: "Latin", languageFamily: "Romance" },
+  { value: "German", label: "German / Deutsch", scriptType: "Latin", languageFamily: "Germanic" },
+  { value: "Gujarati", label: "Gujarati / ગુજરાતી", scriptType: "non-Latin", languageFamily: "Indo-Aryan" },
+  { value: "Hindi", label: "Hindi / हिन्दी", scriptType: "non-Latin", languageFamily: "Indo-Aryan" },
+  { value: "Italian", label: "Italian / Italiano", scriptType: "Latin", languageFamily: "Romance" },
+  { value: "Japanese", label: "Japanese / 日本語", scriptType: "non-Latin", languageFamily: "Japonic" },
+  { value: "Korean", label: "Korean / 한국어", scriptType: "non-Latin", languageFamily: "Koreanic" },
+  { value: "Lithuanian", label: "Lithuanian / Lietuvių", scriptType: "Latin", languageFamily: "Baltic" },
+  { value: "Mandarin", label: "Mandarin / 普通话", scriptType: "non-Latin", languageFamily: "Sino-Tibetan" },
+  { value: "Pashto", label: "Pashto / پښتو", scriptType: "non-Latin", languageFamily: "Iranian" },
+  { value: "Polish", label: "Polish / Polski", scriptType: "Latin", languageFamily: "Slavic" },
+  { value: "Portuguese", label: "Portuguese / Português", scriptType: "Latin", languageFamily: "Romance" },
+  { value: "Punjabi", label: "Punjabi / ਪੰਜਾਬੀ", scriptType: "non-Latin", languageFamily: "Indo-Aryan" },
+  { value: "Romanian", label: "Romanian / Română", scriptType: "Latin", languageFamily: "Romance" },
+  { value: "Russian", label: "Russian / Русский", scriptType: "Cyrillic", languageFamily: "Slavic" },
+  { value: "Somali", label: "Somali / Soomaali", scriptType: "Latin", languageFamily: "Cushitic" },
+  { value: "Spanish", label: "Spanish / Español", scriptType: "Latin", languageFamily: "Romance" },
+  { value: "Swahili", label: "Swahili / Kiswahili", scriptType: "Latin", languageFamily: "Bantu" },
+  { value: "Tamil", label: "Tamil / தமிழ்", scriptType: "non-Latin", languageFamily: "Dravidian" },
+  { value: "Turkish", label: "Turkish / Türkçe", scriptType: "Latin", languageFamily: "Turkic" },
+  { value: "Ukrainian", label: "Ukrainian / Українська", scriptType: "Cyrillic", languageFamily: "Slavic" },
+  { value: "Urdu", label: "Urdu / اردو", scriptType: "non-Latin", languageFamily: "Indo-Aryan" },
+  { value: "Vietnamese", label: "Vietnamese / Tiếng Việt", scriptType: "Latin", languageFamily: "Austroasiatic" },
+  { value: "Other", label: "Other", scriptType: "unknown", languageFamily: "unknown" }
+];
+
 const LANGUAGES = [
   { value: "", label: "English (default)" },
   { value: "French", label: "French / Français" },
@@ -277,6 +336,8 @@ export default function App() {
   const [readingLevel, setReadingLevel] = useState("");
   const [attainmentLevel, setAttainmentLevel] = useState("");
   const [examBoard, setExamBoard] = useState("");
+  const [ealBand, setEalBand] = useState("");
+  const [motherTongue, setMotherTongue] = useState("");
   const [language, setLanguage] = useState("");
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]);
   const [selectedAdaptations, setSelectedAdaptations] = useState([]);
@@ -435,6 +496,36 @@ export default function App() {
       adaptedPrompt += `Student condition(s): ${conditionText}.\n`;
     }
 
+    // EAL / Bell Foundation
+    if (ealBand && motherTongue) {
+      const bandInfo = EAL_BANDS.find(b => b.value === ealBand);
+      const tongueInfo = MOTHER_TONGUES.find(t => t.value === motherTongue);
+
+      if (bandInfo) {
+        adaptedPrompt += `\nEAL Learner (Bell Foundation ${bandInfo.label}):\n`;
+        adaptedPrompt += `${bandInfo.guidance}\n`;
+
+        if (tongueInfo) {
+          adaptedPrompt += `Mother tongue: ${tongueInfo.value}`;
+          if (tongueInfo.scriptType !== "unknown") {
+            adaptedPrompt += ` (${tongueInfo.scriptType} script, ${tongueInfo.languageFamily} language family)`;
+          }
+          adaptedPrompt += `.\n`;
+
+          // Add specific guidance based on language characteristics
+          if (tongueInfo.scriptType === "non-Latin") {
+            adaptedPrompt += `Note: Student uses non-Latin script - provide additional support for letter formation and reading direction.\n`;
+          }
+          if (tongueInfo.languageFamily === "Romance") {
+            adaptedPrompt += `Note: Romance language speaker - leverage cognates with English where possible.\n`;
+          }
+          if (tongueInfo.languageFamily === "Sino-Tibetan") {
+            adaptedPrompt += `Note: Tonal language speaker - explicit support for English intonation and stress patterns may help.\n`;
+          }
+        }
+      }
+    }
+
     if (selectedAdaptations.length > 0) {
       adaptedPrompt += `\nAdaptations to include:\n`;
       selectedAdaptations.forEach((id) => {
@@ -558,6 +649,8 @@ export default function App() {
     setReadingLevel("");
     setAttainmentLevel("");
     setExamBoard("");
+    setEalBand("");
+    setMotherTongue("");
     setLanguage("");
     setSelectedQuestionTypes([]);
     setSelectedAdaptations([]);
@@ -828,6 +921,58 @@ export default function App() {
                     Align content with exam board specifications.
                   </p>
                 </div>
+              </div>
+
+              {/* EAL / Bell Foundation Section */}
+              <div className={`p-3 border rounded-xl ${inputBgMutedClass}`}>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
+                      EAL Proficiency (Bell Foundation)
+                    </label>
+                    <select
+                      className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                      value={ealBand}
+                      onChange={(e) => {
+                        setEalBand(e.target.value);
+                        if (!e.target.value) setMotherTongue("");
+                      }}
+                    >
+                      <option value="">Not applicable</option>
+                      {EAL_BANDS.map((band) => (
+                        <option key={band.value} value={band.value}>{band.label}</option>
+                      ))}
+                    </select>
+                    <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                      For multilingual learners - select EAL proficiency band.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
+                      Mother Tongue {ealBand && <span className="text-red-500">*</span>}
+                    </label>
+                    <select
+                      className={`w-full p-2 border rounded-xl text-sm ${inputBgClass} ${!ealBand ? 'opacity-50' : ''}`}
+                      value={motherTongue}
+                      onChange={(e) => setMotherTongue(e.target.value)}
+                      disabled={!ealBand}
+                    >
+                      <option value="">Select mother tongue...</option>
+                      {MOTHER_TONGUES.map((tongue) => (
+                        <option key={tongue.value} value={tongue.value}>{tongue.label}</option>
+                      ))}
+                    </select>
+                    <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                      {ealBand ? "Required when EAL band is selected." : "Select EAL band first."}
+                    </p>
+                  </div>
+                </div>
+                {ealBand && !motherTongue && (
+                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                    Please select a mother tongue to include EAL support in the prompt.
+                  </p>
+                )}
               </div>
 
               <div>
