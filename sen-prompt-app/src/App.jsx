@@ -405,8 +405,9 @@ export default function App() {
   }, [darkMode]);
 
   // Run prompt with selected AI provider
-  const runPrompt = async () => {
-    if (!prompt) {
+  const runPrompt = async (promptText) => {
+    const textToRun = promptText || prompt;
+    if (!textToRun) {
       setAiError("Please generate a prompt first.");
       return;
     }
@@ -418,15 +419,146 @@ export default function App() {
     try {
       let response;
       if (selectedProvider === "claude") {
-        response = await callClaudeAPI(prompt);
+        response = await callClaudeAPI(textToRun);
       } else if (selectedProvider === "openai") {
-        response = await callOpenAIAPI(prompt);
+        response = await callOpenAIAPI(textToRun);
       } else {
-        response = await callGeminiAPI(prompt);
+        response = await callGeminiAPI(textToRun);
       }
       setAiResponse(response);
     } catch (error) {
       setAiError(error.message || "Failed to get response from AI");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Generate prompt and run with Gemini directly
+  const generateAndRunWithGemini = async () => {
+    // Build the prompt (same logic as generatePrompt)
+    let adaptedPrompt = `You are a ${subject || "[subject]"} teacher creating an accessible learning resource.\n`;
+
+    if (keyStage) {
+      adaptedPrompt += `Target level: ${keyStage}.\n`;
+    }
+
+    if (examBoard) {
+      adaptedPrompt += `Examination board: ${examBoard} - align content with ${examBoard} specification, command words, and assessment objectives.\n`;
+    }
+
+    if (readingLevel) {
+      const levelDescriptions = {
+        below: "Adjust reading level BELOW expected for this key stage (simplified vocabulary, shorter sentences)",
+        at: "Maintain reading level AT expected for this key stage",
+        above: "Adjust reading level ABOVE expected for this key stage (extended vocabulary, more complex structures)"
+      };
+      adaptedPrompt += `Reading level: ${levelDescriptions[readingLevel]}.\n`;
+    }
+
+    if (language) {
+      adaptedPrompt += `Output language: Translate/write the resource in ${language}.\n`;
+    }
+
+    if (resource) {
+      adaptedPrompt += `Adapt the attached resource file (${resource.name}) for a neuro-divergent student.\n`;
+    } else {
+      adaptedPrompt += `Topic focus: ${topic || "[topic]"}.\n`;
+      adaptedPrompt += `Create the output in ${format || "[output format]"} format.\n`;
+    }
+
+    if (attainmentLevel) {
+      const attainmentDescriptions = {
+        low: "Low Attainment - provide additional scaffolding, simpler language, more visual supports, and break down concepts into smaller steps",
+        high: "High Attainment - include extension activities, deeper analysis questions, and opportunities for independent exploration"
+      };
+      adaptedPrompt += `Student attainment: ${attainmentDescriptions[attainmentLevel]}.\n`;
+    }
+
+    if (conditions.length > 0) {
+      const conditionText = conditions.join(" + ");
+      adaptedPrompt += `Student condition(s): ${conditionText}.\n`;
+    }
+
+    if (ealBand && motherTongue) {
+      const bandInfo = EAL_BANDS.find(b => b.value === ealBand);
+      const tongueInfo = MOTHER_TONGUES.find(t => t.value === motherTongue);
+
+      if (bandInfo) {
+        adaptedPrompt += `\nEAL Learner (Bell Foundation ${bandInfo.label}):\n`;
+        adaptedPrompt += `${bandInfo.guidance}\n`;
+
+        if (tongueInfo) {
+          adaptedPrompt += `Mother tongue: ${tongueInfo.value}`;
+          if (tongueInfo.scriptType !== "unknown") {
+            adaptedPrompt += ` (${tongueInfo.scriptType} script, ${tongueInfo.languageFamily} language family)`;
+          }
+          adaptedPrompt += `.\n`;
+
+          if (tongueInfo.scriptType === "non-Latin") {
+            adaptedPrompt += `Note: Student uses non-Latin script - provide additional support for letter formation and reading direction.\n`;
+          }
+          if (tongueInfo.languageFamily === "Romance") {
+            adaptedPrompt += `Note: Romance language speaker - leverage cognates with English where possible.\n`;
+          }
+          if (tongueInfo.languageFamily === "Sino-Tibetan") {
+            adaptedPrompt += `Note: Tonal language speaker - explicit support for English intonation and stress patterns may help.\n`;
+          }
+        }
+      }
+    }
+
+    if (selectedAdaptations.length > 0) {
+      adaptedPrompt += `\nAdaptations to include:\n`;
+      selectedAdaptations.forEach((id) => {
+        const item = ADAPTATION_MAP[id];
+        if (item) {
+          adaptedPrompt += `- ${item.label}\n`;
+        }
+      });
+    }
+
+    if (selectedQuestionTypes.length > 0) {
+      adaptedPrompt += `\nQuestion types to include:\n`;
+      selectedQuestionTypes.forEach((id) => {
+        const qt = QUESTION_TYPES.find((q) => q.id === id);
+        if (qt) {
+          adaptedPrompt += `- ${qt.label}\n`;
+        }
+      });
+    }
+
+    adaptedPrompt += `\nRewrite following these constraints now.\n\n`;
+    adaptedPrompt += `Lesson Title: ${lessonTitle || "[Insert lesson title here]"}\n`;
+    adaptedPrompt += `Lesson Objectives: ${lessonObjectives || "[Insert lesson objectives here]"}\n\n`;
+
+    adaptedPrompt += `Rules:\n`;
+    adaptedPrompt += `- Language: literal, clear, concise\n`;
+    adaptedPrompt += `- Readability: chunked, well-spaced\n`;
+    adaptedPrompt += `- Keep factual accuracy\n`;
+    adaptedPrompt += `- Use supportive tone\n`;
+    adaptedPrompt += `- Avoid oversimplification of key concepts\n`;
+    adaptedPrompt += `- Maintain assessment objectives if present\n`;
+
+    if (format && FORMAT_RULES[format]) {
+      adaptedPrompt += `\nFormat-specific guidelines (${format}):\n`;
+      FORMAT_RULES[format].forEach((rule) => {
+        adaptedPrompt += `- ${rule}\n`;
+      });
+    }
+
+    // Set the prompt in state
+    setPrompt(adaptedPrompt);
+
+    // Run with Gemini
+    setIsLoading(true);
+    setAiError("");
+    setAiResponse("");
+
+    try {
+      const response = await callGeminiAPI(adaptedPrompt);
+      setAiResponse(response);
+    } catch (error) {
+      setAiError(error.message || "Failed to get response from Gemini");
     } finally {
       setIsLoading(false);
     }
@@ -730,21 +862,6 @@ export default function App() {
             </p>
           </div>
           <div className="flex gap-2 items-center">
-            <select
-              value={selectedProvider}
-              onChange={(e) => setSelectedProvider(e.target.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${inputBgClass}`}
-            >
-              {AI_PROVIDERS.map((provider) => (
-                <option key={provider.id} value={provider.id}>{provider.name}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
-            >
-              History ({history.length})
-            </button>
             <button
               onClick={() => setDarkMode(!darkMode)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
@@ -1170,20 +1287,21 @@ export default function App() {
                   Generate Prompt
                 </button>
 
+                <button
+                  onClick={generateAndRunWithGemini}
+                  disabled={isGenerateDisabled() || isLoading}
+                  className={
+                    "px-4 py-2 rounded-xl text-sm font-semibold text-white " +
+                    (isGenerateDisabled() || isLoading
+                      ? "bg-emerald-400 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-700")
+                  }
+                >
+                  {isLoading ? "Generating..." : "Generate with Gemini AI"}
+                </button>
+
                 {prompt && (
                   <>
-                    <button
-                      onClick={runPrompt}
-                      disabled={isLoading}
-                      className={
-                        "px-4 py-2 rounded-xl text-sm font-semibold text-white " +
-                        (isLoading
-                          ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700")
-                      }
-                    >
-                      {isLoading ? "Running..." : `Run with ${AI_PROVIDERS.find(p => p.id === selectedProvider)?.name || selectedProvider}`}
-                    </button>
                     <button
                       onClick={() => downloadPrompt(false)}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
