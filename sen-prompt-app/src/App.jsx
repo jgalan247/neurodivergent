@@ -1252,7 +1252,7 @@ export default function App() {
         <header className="space-y-1 flex justify-between items-start">
           <div>
             <h1 className={`text-3xl font-bold ${textClass}`}>
-              SEN Resource Prompt Generator v2
+              Le Rocquier Adaptive Resource Builder
             </h1>
             <p className={`text-sm ${textMutedClass} max-w-2xl`}>
               Build a tailored AI prompt for neuro-divergent learners. Fill in the details,
@@ -1390,7 +1390,7 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Student Condition(s)</label>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Neurodivergent</label>
                   <div className={`flex flex-wrap gap-2 p-2 border rounded-xl ${inputBgMutedClass}`}>
                     {Object.keys(CONDITION_DEFAULTS).map((cond) => (
                       <label key={cond} className="flex items-center gap-1.5 text-xs cursor-pointer">
