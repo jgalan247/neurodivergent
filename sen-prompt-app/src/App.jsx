@@ -190,6 +190,58 @@ const ADAPTATION_MAP = ADAPTATIONS.reduce((acc, item) => {
 
 const STORAGE_KEY = "sen-prompt-history";
 const MAX_HISTORY = 10;
+const API_KEY_STORAGE = "sen-prompt-api-keys";
+
+const AI_PROVIDERS = [
+  { id: "claude", name: "Claude (Anthropic)", model: "claude-sonnet-4-20250514" },
+  { id: "gemini", name: "Gemini (Google)", model: "gemini-1.5-flash" }
+];
+
+async function callClaudeAPI(apiKey, prompt) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || "Claude API error");
+  }
+
+  const data = await response.json();
+  return data.content[0].text;
+}
+
+async function callGeminiAPI(apiKey, prompt) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || "Gemini API error");
+  }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
 
 export default function App() {
   const [subject, setSubject] = useState("");
@@ -210,7 +262,15 @@ export default function App() {
   const [copyFeedback, setCopyFeedback] = useState("");
   const [darkMode, setDarkMode] = useState(false);
 
-  // Load history and dark mode preference from localStorage
+  // AI Provider state
+  const [selectedProvider, setSelectedProvider] = useState("claude");
+  const [apiKeys, setApiKeys] = useState({ claude: "", gemini: "" });
+  const [showApiSettings, setShowApiSettings] = useState(false);
+  const [aiResponse, setAiResponse] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  // Load history, dark mode preference, and API keys from localStorage
   useEffect(() => {
     const savedHistory = localStorage.getItem(STORAGE_KEY);
     if (savedHistory) {
@@ -225,12 +285,61 @@ export default function App() {
     if (savedDarkMode) {
       setDarkMode(JSON.parse(savedDarkMode));
     }
+
+    const savedApiKeys = localStorage.getItem(API_KEY_STORAGE);
+    if (savedApiKeys) {
+      try {
+        setApiKeys(JSON.parse(savedApiKeys));
+      } catch (e) {
+        console.error("Failed to parse API keys:", e);
+      }
+    }
   }, []);
 
   // Save dark mode preference
   useEffect(() => {
     localStorage.setItem("sen-prompt-dark-mode", JSON.stringify(darkMode));
   }, [darkMode]);
+
+  // Save API keys
+  const saveApiKey = (provider, key) => {
+    const newKeys = { ...apiKeys, [provider]: key };
+    setApiKeys(newKeys);
+    localStorage.setItem(API_KEY_STORAGE, JSON.stringify(newKeys));
+  };
+
+  // Run prompt with selected AI provider
+  const runPrompt = async () => {
+    const apiKey = apiKeys[selectedProvider];
+    if (!apiKey) {
+      setAiError(`Please set your ${selectedProvider === "claude" ? "Claude" : "Gemini"} API key in settings.`);
+      setShowApiSettings(true);
+      return;
+    }
+
+    if (!prompt) {
+      setAiError("Please generate a prompt first.");
+      return;
+    }
+
+    setIsLoading(true);
+    setAiError("");
+    setAiResponse("");
+
+    try {
+      let response;
+      if (selectedProvider === "claude") {
+        response = await callClaudeAPI(apiKey, prompt);
+      } else {
+        response = await callGeminiAPI(apiKey, prompt);
+      }
+      setAiResponse(response);
+    } catch (error) {
+      setAiError(error.message || "Failed to get response from AI");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleConditionToggle = (conditionName) => {
     setConditions((prev) => {
@@ -478,6 +587,12 @@ export default function App() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowApiSettings(!showApiSettings)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
+            >
+              API Settings
+            </button>
+            <button
               onClick={() => setShowHistory(!showHistory)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
             >
@@ -492,6 +607,86 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        {/* API Settings panel */}
+        {showApiSettings && (
+          <div className={`${cardClass} rounded-2xl shadow-md p-4 space-y-4`}>
+            <div className="flex justify-between items-center">
+              <h2 className={`text-lg font-semibold ${textClass}`}>AI Provider Settings</h2>
+              <button
+                onClick={() => setShowApiSettings(false)}
+                className={`text-xs ${textMutedClass} hover:text-red-600`}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Select AI Provider</label>
+                <div className={`flex gap-4 p-2 border rounded-xl ${inputBgMutedClass}`}>
+                  {AI_PROVIDERS.map((provider) => (
+                    <label key={provider.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="aiProvider"
+                        value={provider.id}
+                        checked={selectedProvider === provider.id}
+                        onChange={(e) => setSelectedProvider(e.target.value)}
+                      />
+                      <span className={textClass}>{provider.name}</span>
+                      {apiKeys[provider.id] && (
+                        <span className="text-green-600 text-xs ml-1">✓</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
+                  Claude API Key
+                </label>
+                <input
+                  type="password"
+                  className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                  placeholder="sk-ant-..."
+                  value={apiKeys.claude}
+                  onChange={(e) => saveApiKey("claude", e.target.value)}
+                />
+                <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                  Get your API key from{" "}
+                  <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    console.anthropic.com
+                  </a>
+                </p>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
+                  Gemini API Key
+                </label>
+                <input
+                  type="password"
+                  className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
+                  placeholder="AIza..."
+                  value={apiKeys.gemini}
+                  onChange={(e) => saveApiKey("gemini", e.target.value)}
+                />
+                <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                  Get your API key from{" "}
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    aistudio.google.com
+                  </a>
+                </p>
+              </div>
+
+              <p className={`text-xs ${textMutedSmClass} border-t ${borderClass} pt-3`}>
+                API keys are stored locally in your browser and never sent to our servers.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* History panel */}
         {showHistory && (
@@ -799,6 +994,18 @@ export default function App() {
                 {prompt && (
                   <>
                     <button
+                      onClick={runPrompt}
+                      disabled={isLoading}
+                      className={
+                        "px-4 py-2 rounded-xl text-sm font-semibold text-white " +
+                        (isLoading
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700")
+                      }
+                    >
+                      {isLoading ? "Running..." : `Run with ${selectedProvider === "claude" ? "Claude" : "Gemini"}`}
+                    </button>
+                    <button
                       onClick={() => downloadPrompt(false)}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
                     >
@@ -870,6 +1077,58 @@ export default function App() {
             </div>
           </section>
         </main>
+
+        {/* AI Response Section */}
+        {(aiResponse || aiError || isLoading) && (
+          <div className={`${cardClass} rounded-2xl shadow-md p-4 space-y-3`}>
+            <div className="flex justify-between items-center">
+              <h2 className={`text-lg font-semibold ${textClass}`}>
+                AI Response
+                <span className={`text-xs font-normal ${textMutedClass} ml-2`}>
+                  ({selectedProvider === "claude" ? "Claude" : "Gemini"})
+                </span>
+              </h2>
+              {aiResponse && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => copyToClipboard(aiResponse)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
+                  >
+                    Copy
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAiResponse("");
+                      setAiError("");
+                    }}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold text-red-600 border ${borderClass} hover:bg-red-50 dark:hover:bg-red-900/20`}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {aiError && (
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-xl">
+                <p className="text-sm text-red-700 dark:text-red-300">{aiError}</p>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className={`ml-3 ${textMutedClass}`}>Generating response...</span>
+              </div>
+            )}
+
+            {aiResponse && (
+              <div className={`p-4 border rounded-xl ${inputBgMutedClass} overflow-auto max-h-[500px]`}>
+                <pre className={`text-sm whitespace-pre-wrap font-sans ${textClass}`}>{aiResponse}</pre>
+              </div>
+            )}
+          </div>
+        )}
 
         <footer className={`text-center text-xs ${textMutedSmClass} pb-4`}>
           <p>Built for educators supporting neuro-divergent learners</p>
