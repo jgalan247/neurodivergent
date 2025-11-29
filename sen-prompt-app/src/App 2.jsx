@@ -1,7 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
-import pptxgen from "pptxgenjs";
+import { useState, useEffect } from "react";
 
 const ADAPTATIONS = [
   { id: "use_icons", label: "Use icons to support key ideas" },
@@ -384,9 +381,6 @@ export default function App() {
   const [aiResponse, setAiResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isGeneratingPptx, setIsGeneratingPptx] = useState(false);
-  const aiResponseRef = useRef(null);
 
   // Load history and dark mode preference from localStorage
   useEffect(() => {
@@ -803,250 +797,6 @@ export default function App() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    }
-  };
-
-  const downloadAsPdf = async () => {
-    if (!aiResponse || !aiResponseRef.current) return;
-
-    setIsGeneratingPdf(true);
-
-    try {
-      const element = aiResponseRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: darkMode ? "#1e293b" : "#ffffff"
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4"
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10;
-
-      // Calculate if we need multiple pages
-      const scaledHeight = imgHeight * ratio * (pdfWidth / imgWidth);
-      const pageHeight = pdfHeight - 20;
-
-      if (scaledHeight <= pageHeight) {
-        // Single page
-        pdf.addImage(imgData, "PNG", imgX, imgY, pdfWidth - 20, (imgHeight * (pdfWidth - 20)) / imgWidth);
-      } else {
-        // Multiple pages
-        let heightLeft = scaledHeight;
-        let position = 0;
-
-        pdf.addImage(imgData, "PNG", 10, imgY, pdfWidth - 20, scaledHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position = heightLeft - scaledHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, "PNG", 10, position + imgY, pdfWidth - 20, scaledHeight);
-          heightLeft -= pageHeight;
-        }
-      }
-
-      const filename = `${subject || "resource"}_${topic || "output"}_${new Date().toISOString().split("T")[0]}.pdf`;
-      pdf.save(filename.replace(/\s+/g, "_"));
-    } catch (error) {
-      console.error("PDF generation error:", error);
-      setAiError("Failed to generate PDF. Please try again.");
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
-  const downloadAsPptx = async () => {
-    if (!aiResponse) return;
-
-    setIsGeneratingPptx(true);
-
-    try {
-      const pptx = new pptxgen();
-      pptx.author = "SEN Resource Generator";
-      pptx.title = `${subject || "Resource"} - ${topic || lessonTitle || "Output"}`;
-      pptx.subject = "Educational Resource";
-
-      // Parse AI response into sections
-      const lines = aiResponse.split("\n");
-      const sections = [];
-      let currentSection = { title: "", content: [] };
-
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) continue;
-
-        // Detect section headers (lines starting with #, **, or all caps with colon)
-        const isHeader =
-          trimmedLine.startsWith("#") ||
-          (trimmedLine.startsWith("**") && trimmedLine.endsWith("**")) ||
-          /^[A-Z][A-Z\s]+:/.test(trimmedLine) ||
-          /^#{1,3}\s/.test(trimmedLine);
-
-        if (isHeader) {
-          // Save previous section if it has content
-          if (currentSection.title || currentSection.content.length > 0) {
-            sections.push({ ...currentSection });
-          }
-          // Start new section - clean up markdown formatting
-          currentSection = {
-            title: trimmedLine
-              .replace(/^#+\s*/, "")
-              .replace(/^\*\*/, "")
-              .replace(/\*\*$/, "")
-              .replace(/:$/, ""),
-            content: []
-          };
-        } else {
-          // Add content to current section
-          currentSection.content.push(trimmedLine);
-        }
-      }
-
-      // Don't forget the last section
-      if (currentSection.title || currentSection.content.length > 0) {
-        sections.push(currentSection);
-      }
-
-      // If no sections were detected, create one with all content
-      if (sections.length === 0) {
-        sections.push({
-          title: topic || lessonTitle || "Content",
-          content: lines.filter(l => l.trim())
-        });
-      }
-
-      // Create title slide
-      const titleSlide = pptx.addSlide();
-      titleSlide.addText(subject || "Educational Resource", {
-        x: 0.5,
-        y: 1.5,
-        w: 9,
-        h: 1.5,
-        fontSize: 36,
-        bold: true,
-        color: "1e293b",
-        align: "center"
-      });
-      titleSlide.addText(topic || lessonTitle || "Adapted Resource", {
-        x: 0.5,
-        y: 3,
-        w: 9,
-        h: 1,
-        fontSize: 24,
-        color: "475569",
-        align: "center"
-      });
-      if (conditions.length > 0 || attainmentLevel) {
-        const subtitle = [
-          conditions.length > 0 ? `Adapted for: ${conditions.join(", ")}` : "",
-          attainmentLevel ? `${attainmentLevel === "low" ? "Low" : "High"} Attainment` : ""
-        ].filter(Boolean).join(" | ");
-        titleSlide.addText(subtitle, {
-          x: 0.5,
-          y: 4.2,
-          w: 9,
-          h: 0.5,
-          fontSize: 14,
-          color: "64748b",
-          align: "center"
-        });
-      }
-
-      // Create content slides from sections
-      for (const section of sections) {
-        const slide = pptx.addSlide();
-
-        // Add section title
-        slide.addText(section.title || "Content", {
-          x: 0.5,
-          y: 0.3,
-          w: 9,
-          h: 0.8,
-          fontSize: 28,
-          bold: true,
-          color: "1e293b"
-        });
-
-        // Process content into bullet points
-        const bulletPoints = [];
-        for (const item of section.content) {
-          // Clean up markdown formatting
-          let cleanItem = item
-            .replace(/^\s*[-*•]\s*/, "")  // Remove bullet markers
-            .replace(/\*\*/g, "")          // Remove bold markers
-            .replace(/\*/g, "")            // Remove italic markers
-            .replace(/`/g, "")             // Remove code markers
-            .trim();
-
-          if (cleanItem) {
-            bulletPoints.push({ text: cleanItem, options: { bullet: true } });
-          }
-        }
-
-        // Add bullet points (limit per slide for readability)
-        const maxBulletsPerSlide = 6;
-        if (bulletPoints.length > 0) {
-          const bulletsForSlide = bulletPoints.slice(0, maxBulletsPerSlide);
-          slide.addText(bulletsForSlide, {
-            x: 0.5,
-            y: 1.3,
-            w: 9,
-            h: 4.5,
-            fontSize: 18,
-            color: "334155",
-            valign: "top",
-            lineSpacing: 28
-          });
-
-          // If more bullets, create additional slides
-          let remainingBullets = bulletPoints.slice(maxBulletsPerSlide);
-          while (remainingBullets.length > 0) {
-            const extraSlide = pptx.addSlide();
-            extraSlide.addText(`${section.title} (continued)`, {
-              x: 0.5,
-              y: 0.3,
-              w: 9,
-              h: 0.8,
-              fontSize: 28,
-              bold: true,
-              color: "1e293b"
-            });
-            extraSlide.addText(remainingBullets.slice(0, maxBulletsPerSlide), {
-              x: 0.5,
-              y: 1.3,
-              w: 9,
-              h: 4.5,
-              fontSize: 18,
-              color: "334155",
-              valign: "top",
-              lineSpacing: 28
-            });
-            remainingBullets = remainingBullets.slice(maxBulletsPerSlide);
-          }
-        }
-      }
-
-      // Save the file
-      const filename = `${subject || "resource"}_${topic || "output"}_${new Date().toISOString().split("T")[0]}`;
-      await pptx.writeFile({ fileName: filename.replace(/\s+/g, "_") + ".pptx" });
-    } catch (error) {
-      console.error("PowerPoint generation error:", error);
-      setAiError("Failed to generate PowerPoint. Please try again.");
-    } finally {
-      setIsGeneratingPptx(false);
     }
   };
 
@@ -1632,25 +1382,11 @@ export default function App() {
               <h2 className={`text-lg font-semibold ${textClass}`}>
                 AI Response
                 <span className={`text-xs font-normal ${textMutedClass} ml-2`}>
-                  (Gemini)
+                  ({selectedProvider === "claude" ? "Claude" : "Gemini"})
                 </span>
               </h2>
               {aiResponse && (
                 <div className="flex gap-2">
-                  <button
-                    onClick={downloadAsPdf}
-                    disabled={isGeneratingPdf}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold text-white ${isGeneratingPdf ? "bg-emerald-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
-                  >
-                    {isGeneratingPdf ? "Generating PDF..." : "Download PDF"}
-                  </button>
-                  <button
-                    onClick={downloadAsPptx}
-                    disabled={isGeneratingPptx}
-                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold text-white ${isGeneratingPptx ? "bg-orange-400" : "bg-orange-600 hover:bg-orange-700"}`}
-                  >
-                    {isGeneratingPptx ? "Generating PPTX..." : "Download PowerPoint"}
-                  </button>
                   <button
                     onClick={() => copyToClipboard(aiResponse)}
                     className={`px-3 py-1 rounded-lg text-[11px] font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
@@ -1684,7 +1420,7 @@ export default function App() {
             )}
 
             {aiResponse && (
-              <div ref={aiResponseRef} className={`p-4 border rounded-xl ${inputBgMutedClass} overflow-auto max-h-[500px]`}>
+              <div className={`p-4 border rounded-xl ${inputBgMutedClass} overflow-auto max-h-[500px]`}>
                 <pre className={`text-sm whitespace-pre-wrap font-sans ${textClass}`}>{aiResponse}</pre>
               </div>
             )}
