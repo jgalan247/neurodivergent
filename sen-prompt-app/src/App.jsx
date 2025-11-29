@@ -262,13 +262,15 @@ const STORAGE_KEY = "sen-prompt-history";
 const MAX_HISTORY = 10;
 
 const AI_PROVIDERS = [
-  { id: "claude", name: "Claude (Anthropic)", model: "claude-sonnet-4-20250514" },
-  { id: "gemini", name: "Gemini (Google)", model: "gemini-1.5-flash" }
+  { id: "gemini", name: "Gemini Flash", model: "gemini-1.5-flash" },
+  { id: "claude", name: "Claude Haiku", model: "claude-3-5-haiku-20241022" },
+  { id: "openai", name: "GPT-4o Mini", model: "gpt-4o-mini" }
 ];
 
 // API keys from environment variables
 const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
 async function callClaudeAPI(prompt) {
   if (!CLAUDE_API_KEY) {
@@ -284,7 +286,7 @@ async function callClaudeAPI(prompt) {
       "anthropic-dangerous-direct-browser-access": "true"
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-haiku-20241022",
       max_tokens: 4096,
       messages: [{ role: "user", content: prompt }]
     })
@@ -324,6 +326,33 @@ async function callGeminiAPI(prompt) {
   return data.candidates[0].content.parts[0].text;
 }
 
+async function callOpenAIAPI(prompt) {
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured. Please set VITE_OPENAI_API_KEY environment variable.");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || "OpenAI API error");
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
 export default function App() {
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
@@ -348,7 +377,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   // AI Provider state
-  const [selectedProvider, setSelectedProvider] = useState("claude");
+  const [selectedProvider, setSelectedProvider] = useState("gemini");
   const [aiResponse, setAiResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [aiError, setAiError] = useState("");
@@ -390,6 +419,8 @@ export default function App() {
       let response;
       if (selectedProvider === "claude") {
         response = await callClaudeAPI(prompt);
+      } else if (selectedProvider === "openai") {
+        response = await callOpenAIAPI(prompt);
       } else {
         response = await callGeminiAPI(prompt);
       }
@@ -1151,7 +1182,7 @@ export default function App() {
                           : "bg-blue-600 hover:bg-blue-700")
                       }
                     >
-                      {isLoading ? "Running..." : `Run with ${selectedProvider === "claude" ? "Claude" : "Gemini"}`}
+                      {isLoading ? "Running..." : `Run with ${AI_PROVIDERS.find(p => p.id === selectedProvider)?.name || selectedProvider}`}
                     </button>
                     <button
                       onClick={() => downloadPrompt(false)}
