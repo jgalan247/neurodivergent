@@ -74,6 +74,11 @@ const READING_LEVELS = [
   { value: "above", label: "Above expected (extended)" }
 ];
 
+const ATTAINMENT_LEVELS = [
+  { value: "low", label: "Low Attainment" },
+  { value: "high", label: "High Attainment" }
+];
+
 const LANGUAGES = [
   { value: "", label: "English (default)" },
   { value: "French", label: "French / Français" },
@@ -263,6 +268,7 @@ export default function App() {
   const [lessonObjectives, setLessonObjectives] = useState("");
   const [keyStage, setKeyStage] = useState("");
   const [readingLevel, setReadingLevel] = useState("");
+  const [attainmentLevel, setAttainmentLevel] = useState("");
   const [language, setLanguage] = useState("");
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]);
   const [selectedAdaptations, setSelectedAdaptations] = useState([]);
@@ -401,8 +407,20 @@ export default function App() {
       adaptedPrompt += `Create the output in ${format || "[output format]"} format.\n`;
     }
 
-    const conditionText = conditions.length > 0 ? conditions.join(" + ") : "[condition]";
-    adaptedPrompt += `Student condition(s): ${conditionText}.\n`;
+    // Attainment level
+    if (attainmentLevel) {
+      const attainmentDescriptions = {
+        low: "Low Attainment - provide additional scaffolding, simpler language, more visual supports, and break down concepts into smaller steps",
+        high: "High Attainment - include extension activities, deeper analysis questions, and opportunities for independent exploration"
+      };
+      adaptedPrompt += `Student attainment: ${attainmentDescriptions[attainmentLevel]}.\n`;
+    }
+
+    // Conditions (optional if attainment is selected)
+    if (conditions.length > 0) {
+      const conditionText = conditions.join(" + ");
+      adaptedPrompt += `Student condition(s): ${conditionText}.\n`;
+    }
 
     if (selectedAdaptations.length > 0) {
       adaptedPrompt += `\nAdaptations to include:\n`;
@@ -525,6 +543,7 @@ export default function App() {
     setLessonObjectives("");
     setKeyStage("");
     setReadingLevel("");
+    setAttainmentLevel("");
     setLanguage("");
     setSelectedQuestionTypes([]);
     setSelectedAdaptations([]);
@@ -535,7 +554,9 @@ export default function App() {
   };
 
   const isGenerateDisabled = () => {
-    if (!subject || conditions.length === 0) return true;
+    // Must have subject and either conditions OR attainment level
+    if (!subject) return true;
+    if (conditions.length === 0 && !attainmentLevel) return true;
     if (!resource && (!topic || !format)) return true;
     return false;
   };
@@ -733,6 +754,38 @@ export default function App() {
                     Select multiple conditions to merge their adaptations.
                   </p>
                 </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Attainment Level</label>
+                  <div className={`flex gap-4 p-2 border rounded-xl ${inputBgMutedClass}`}>
+                    {ATTAINMENT_LEVELS.map((level) => (
+                      <label key={level.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="attainmentLevel"
+                          value={level.value}
+                          checked={attainmentLevel === level.value}
+                          onChange={(e) => setAttainmentLevel(e.target.value)}
+                        />
+                        <span className={textClass}>{level.label}</span>
+                      </label>
+                    ))}
+                    {attainmentLevel && (
+                      <button
+                        onClick={() => setAttainmentLevel("")}
+                        className={`text-xs ${textMutedClass} hover:text-red-600 ml-auto`}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                    Select attainment level to tailor content difficulty.
+                  </p>
+                </div>
+                <div></div>
               </div>
 
               <div>
