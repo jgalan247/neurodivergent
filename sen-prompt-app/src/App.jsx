@@ -365,6 +365,7 @@ export default function App() {
   const [resource, setResource] = useState(null);
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonObjectives, setLessonObjectives] = useState("");
+  const [sourceContent, setSourceContent] = useState("");
   const [keyStage, setKeyStage] = useState("");
   const [readingLevel, setReadingLevel] = useState("");
   const [attainmentLevel, setAttainmentLevel] = useState("");
@@ -537,6 +538,12 @@ export default function App() {
     adaptedPrompt += `\nRewrite following these constraints now.\n\n`;
     adaptedPrompt += `Lesson Title: ${lessonTitle || "[Insert lesson title here]"}\n`;
     adaptedPrompt += `Lesson Objectives: ${lessonObjectives || "[Insert lesson objectives here]"}\n\n`;
+
+    if (sourceContent) {
+      adaptedPrompt += `SOURCE CONTENT TO ADAPT:\n`;
+      adaptedPrompt += `Use the following material as the basis for creating the resource. Adapt this content according to the student needs and format specified above.\n\n`;
+      adaptedPrompt += `---\n${sourceContent}\n---\n\n`;
+    }
 
     adaptedPrompt += `Rules:\n`;
     adaptedPrompt += `- Language: literal, clear, concise\n`;
@@ -721,6 +728,12 @@ export default function App() {
     adaptedPrompt += `\nRewrite following these constraints now.\n\n`;
     adaptedPrompt += `Lesson Title: ${lessonTitle || "[Insert lesson title here]"}\n`;
     adaptedPrompt += `Lesson Objectives: ${lessonObjectives || "[Insert lesson objectives here]"}\n\n`;
+
+    if (sourceContent) {
+      adaptedPrompt += `SOURCE CONTENT TO ADAPT:\n`;
+      adaptedPrompt += `Use the following material as the basis for creating the resource. Adapt this content according to the student needs and format specified above.\n\n`;
+      adaptedPrompt += `---\n${sourceContent}\n---\n\n`;
+    }
 
     adaptedPrompt += `Rules:\n`;
     adaptedPrompt += `- Language: literal, clear, concise\n`;
@@ -1193,6 +1206,7 @@ export default function App() {
     setResource(null);
     setLessonTitle("");
     setLessonObjectives("");
+    setSourceContent("");
     setKeyStage("");
     setReadingLevel("");
     setAttainmentLevel("");
@@ -1516,6 +1530,29 @@ export default function App() {
                   value={lessonObjectives}
                   onChange={(e) => setLessonObjectives(e.target.value)}
                 />
+              </div>
+
+              {/* Source Content */}
+              <div>
+                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
+                  Source Content
+                  <span className={`text-xs font-normal ${textMutedClass} ml-2`}>(recommended)</span>
+                </label>
+                <textarea
+                  className={`w-full p-2 border rounded-xl text-sm min-h-[150px] ${inputBgClass}`}
+                  placeholder="Paste here:
+• Exam specification learning objectives
+• Textbook content or lesson notes to adapt
+• Key concepts and vocabulary to include
+• Any specific examples or questions to use
+
+The more context you provide, the better the output."
+                  value={sourceContent}
+                  onChange={(e) => setSourceContent(e.target.value)}
+                />
+                <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                  Paste exam spec content, textbook excerpts, or lesson material. This gives Claude the context to create accurate, curriculum-aligned resources.
+                </p>
               </div>
 
               {/* Reading Level & Language */}
