@@ -79,6 +79,13 @@ const ATTAINMENT_LEVELS = [
   { value: "high", label: "High Attainment" }
 ];
 
+const EXAM_BOARDS = [
+  { value: "OCR", label: "OCR" },
+  { value: "AQA", label: "AQA" },
+  { value: "Pearson", label: "Pearson" },
+  { value: "Edexcel", label: "Edexcel" }
+];
+
 const LANGUAGES = [
   { value: "", label: "English (default)" },
   { value: "French", label: "French / Français" },
@@ -269,6 +276,7 @@ export default function App() {
   const [keyStage, setKeyStage] = useState("");
   const [readingLevel, setReadingLevel] = useState("");
   const [attainmentLevel, setAttainmentLevel] = useState("");
+  const [examBoard, setExamBoard] = useState("");
   const [language, setLanguage] = useState("");
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]);
   const [selectedAdaptations, setSelectedAdaptations] = useState([]);
@@ -383,6 +391,11 @@ export default function App() {
 
     if (keyStage) {
       adaptedPrompt += `Target level: ${keyStage}.\n`;
+    }
+
+    // Exam board
+    if (examBoard) {
+      adaptedPrompt += `Examination board: ${examBoard} - align content with ${examBoard} specification, command words, and assessment objectives.\n`;
     }
 
     // Reading level adjustment
@@ -544,6 +557,7 @@ export default function App() {
     setKeyStage("");
     setReadingLevel("");
     setAttainmentLevel("");
+    setExamBoard("");
     setLanguage("");
     setSelectedQuestionTypes([]);
     setSelectedAdaptations([]);
@@ -785,7 +799,35 @@ export default function App() {
                     Select attainment level to tailor content difficulty.
                   </p>
                 </div>
-                <div></div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Examination Board</label>
+                  <div className={`flex flex-wrap gap-3 p-2 border rounded-xl ${inputBgMutedClass}`}>
+                    {EXAM_BOARDS.map((board) => (
+                      <label key={board.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="examBoard"
+                          value={board.value}
+                          checked={examBoard === board.value}
+                          onChange={(e) => setExamBoard(e.target.value)}
+                        />
+                        <span className={textClass}>{board.label}</span>
+                      </label>
+                    ))}
+                    {examBoard && (
+                      <button
+                        onClick={() => setExamBoard("")}
+                        className={`text-xs ${textMutedClass} hover:text-red-600 ml-auto`}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-xs ${textMutedSmClass}`}>
+                    Align content with exam board specifications.
+                  </p>
+                </div>
               </div>
 
               <div>
