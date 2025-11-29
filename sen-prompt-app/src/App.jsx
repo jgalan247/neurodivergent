@@ -267,7 +267,7 @@ const MAX_HISTORY = 10;
 
 const AI_PROVIDERS = [
   { id: "gemini", name: "Gemini 2.5 Flash", model: "gemini-2.5-flash" },
-  { id: "claude", name: "Claude Haiku", model: "claude-3-5-haiku-20241022" },
+  { id: "claude", name: "Claude Sonnet 4", model: "claude-sonnet-4-20250514" },
   { id: "openai", name: "GPT-4o Mini", model: "gpt-4o-mini" }
 ];
 
@@ -290,7 +290,7 @@ async function callClaudeAPI(prompt) {
       "anthropic-dangerous-direct-browser-access": "true"
     },
     body: JSON.stringify({
-      model: "claude-3-5-haiku-20241022",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       messages: [{ role: "user", content: prompt }]
     })
@@ -1767,7 +1767,7 @@ export default function App() {
               <h2 className={`text-lg font-semibold ${textClass}`}>
                 AI Response
                 <span className={`text-xs font-normal ${textMutedClass} ml-2`}>
-                  (Claude Haiku)
+                  (Claude Sonnet 4)
                 </span>
               </h2>
               {aiResponse && (
