@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 const ADAPTATIONS = [
   { id: "use_icons", label: "Use icons to support key ideas" },
@@ -543,6 +545,7 @@ export default function App() {
     adaptedPrompt += `- Use supportive tone\n`;
     adaptedPrompt += `- Avoid oversimplification of key concepts\n`;
     adaptedPrompt += `- Maintain assessment objectives if present\n`;
+    adaptedPrompt += `- For ALL mathematical expressions, use LaTeX notation: inline math with single dollar signs ($x^2$) and display math with double dollar signs ($$\\frac{a}{b}$$)\n`;
 
     if (format && FORMAT_RULES[format]) {
       adaptedPrompt += `\nFormat-specific guidelines (${format}):\n`;
@@ -726,6 +729,7 @@ export default function App() {
     adaptedPrompt += `- Use supportive tone\n`;
     adaptedPrompt += `- Avoid oversimplification of key concepts\n`;
     adaptedPrompt += `- Maintain assessment objectives if present\n`;
+    adaptedPrompt += `- For ALL mathematical expressions, use LaTeX notation: inline math with single dollar signs ($x^2$) and display math with double dollar signs ($$\\frac{a}{b}$$)\n`;
 
     // Add format-specific rules
     if (format && FORMAT_RULES[format]) {
@@ -1079,6 +1083,106 @@ export default function App() {
     } finally {
       setIsGeneratingPptx(false);
     }
+  };
+
+  // Render text with KaTeX math expressions
+  // Supports both inline ($...$) and display ($$...$$) math
+  const renderWithMath = (text) => {
+    if (!text) return null;
+
+    // Split by display math first ($$...$$), then inline math ($...$)
+    const parts = [];
+    let remaining = text;
+    let key = 0;
+
+    // Process display math ($$...$$)
+    while (remaining.includes("$$")) {
+      const startIdx = remaining.indexOf("$$");
+      const endIdx = remaining.indexOf("$$", startIdx + 2);
+
+      if (endIdx === -1) break;
+
+      // Add text before math
+      if (startIdx > 0) {
+        parts.push({ type: "text", content: remaining.slice(0, startIdx), key: key++ });
+      }
+
+      // Add display math
+      const mathContent = remaining.slice(startIdx + 2, endIdx);
+      parts.push({ type: "display-math", content: mathContent, key: key++ });
+
+      remaining = remaining.slice(endIdx + 2);
+    }
+
+    // Process inline math ($...$) in remaining text
+    if (remaining) {
+      const inlineParts = remaining.split(/(\$[^$]+\$)/g);
+      for (const part of inlineParts) {
+        if (part.startsWith("$") && part.endsWith("$") && part.length > 2) {
+          parts.push({ type: "inline-math", content: part.slice(1, -1), key: key++ });
+        } else if (part) {
+          parts.push({ type: "text", content: part, key: key++ });
+        }
+      }
+    }
+
+    // If no math found, return plain text
+    if (parts.length === 0) {
+      return <span>{text}</span>;
+    }
+
+    return parts.map((part) => {
+      if (part.type === "display-math") {
+        try {
+          return (
+            <div
+              key={part.key}
+              className="my-3 text-center overflow-x-auto"
+              dangerouslySetInnerHTML={{
+                __html: katex.renderToString(part.content, {
+                  displayMode: true,
+                  throwOnError: false,
+                  trust: true
+                })
+              }}
+            />
+          );
+        } catch (e) {
+          return <div key={part.key} className="text-red-500">{`$$${part.content}$$`}</div>;
+        }
+      } else if (part.type === "inline-math") {
+        try {
+          return (
+            <span
+              key={part.key}
+              dangerouslySetInnerHTML={{
+                __html: katex.renderToString(part.content, {
+                  displayMode: false,
+                  throwOnError: false,
+                  trust: true
+                })
+              }}
+            />
+          );
+        } catch (e) {
+          return <span key={part.key} className="text-red-500">{`$${part.content}$`}</span>;
+        }
+      } else {
+        return <span key={part.key}>{part.content}</span>;
+      }
+    });
+  };
+
+  // Render full AI response with math support, preserving line breaks
+  const renderAiResponse = (response) => {
+    if (!response) return null;
+
+    const lines = response.split("\n");
+    return lines.map((line, idx) => (
+      <div key={idx} className={line.trim() === "" ? "h-4" : ""}>
+        {renderWithMath(line)}
+      </div>
+    ));
   };
 
   const resetForm = () => {
@@ -1716,7 +1820,7 @@ export default function App() {
 
             {aiResponse && (
               <div ref={aiResponseRef} className={`p-4 border rounded-xl ${inputBgMutedClass} overflow-auto max-h-[500px]`}>
-                <pre className={`text-sm whitespace-pre-wrap font-sans ${textClass}`}>{aiResponse}</pre>
+                <div className={`text-sm font-sans ${textClass}`}>{renderAiResponse(aiResponse)}</div>
               </div>
             )}
           </div>
