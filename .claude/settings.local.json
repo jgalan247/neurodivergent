@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(gh run list:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

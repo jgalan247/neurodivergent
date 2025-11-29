@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";
 
 const ADAPTATIONS = [
@@ -807,55 +806,87 @@ export default function App() {
   };
 
   const downloadAsPdf = async () => {
-    if (!aiResponse || !aiResponseRef.current) return;
+    if (!aiResponse) return;
 
     setIsGeneratingPdf(true);
 
     try {
-      const element = aiResponseRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: darkMode ? "#1e293b" : "#ffffff"
-      });
-
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4"
       });
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const maxWidth = pageWidth - margin * 2;
+      let yPosition = margin;
 
-      // Calculate if we need multiple pages
-      const scaledHeight = imgHeight * ratio * (pdfWidth / imgWidth);
-      const pageHeight = pdfHeight - 20;
+      // Add title
+      pdf.setFontSize(18);
+      pdf.setFont("helvetica", "bold");
+      const title = `${subject || "Resource"} - ${topic || lessonTitle || "Output"}`;
+      pdf.text(title, margin, yPosition);
+      yPosition += 10;
 
-      if (scaledHeight <= pageHeight) {
-        // Single page
-        pdf.addImage(imgData, "PNG", imgX, imgY, pdfWidth - 20, (imgHeight * (pdfWidth - 20)) / imgWidth);
-      } else {
-        // Multiple pages
-        let heightLeft = scaledHeight;
-        let position = 0;
+      // Add metadata line
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(100);
+      const metadata = [
+        conditions.length > 0 ? `Adapted for: ${conditions.join(", ")}` : "",
+        attainmentLevel ? `${attainmentLevel === "low" ? "Low" : "High"} Attainment` : "",
+        keyStage || ""
+      ].filter(Boolean).join(" | ");
+      if (metadata) {
+        pdf.text(metadata, margin, yPosition);
+        yPosition += 8;
+      }
 
-        pdf.addImage(imgData, "PNG", 10, imgY, pdfWidth - 20, scaledHeight);
-        heightLeft -= pageHeight;
+      // Reset text color and add separator line
+      pdf.setTextColor(0);
+      pdf.setDrawColor(200);
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
 
-        while (heightLeft > 0) {
-          position = heightLeft - scaledHeight;
+      // Add content
+      pdf.setFontSize(11);
+      pdf.setFont("helvetica", "normal");
+
+      // Split content into lines that fit the page width
+      const lines = pdf.splitTextToSize(aiResponse, maxWidth);
+
+      for (const line of lines) {
+        // Check if we need a new page
+        if (yPosition > pageHeight - margin) {
           pdf.addPage();
-          pdf.addImage(imgData, "PNG", 10, position + imgY, pdfWidth - 20, scaledHeight);
-          heightLeft -= pageHeight;
+          yPosition = margin;
         }
+
+        // Check for headers (lines that start with # or ** or are all caps)
+        const trimmedLine = line.trim();
+        const isHeader = trimmedLine.startsWith("#") ||
+                         (trimmedLine.startsWith("**") && trimmedLine.endsWith("**")) ||
+                         /^[A-Z][A-Z\s]+:/.test(trimmedLine);
+
+        if (isHeader) {
+          yPosition += 3; // Extra space before header
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(12);
+          // Clean up markdown
+          const cleanHeader = trimmedLine
+            .replace(/^#+\s*/, "")
+            .replace(/^\*\*/, "")
+            .replace(/\*\*$/, "");
+          pdf.text(cleanHeader, margin, yPosition);
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(11);
+        } else {
+          pdf.text(line, margin, yPosition);
+        }
+
+        yPosition += 6;
       }
 
       const filename = `${subject || "resource"}_${topic || "output"}_${new Date().toISOString().split("T")[0]}.pdf`;
