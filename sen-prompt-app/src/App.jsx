@@ -1863,8 +1863,11 @@ The more context you provide, the better the output."
           </div>
         )}
 
-        <footer className={`text-center text-xs ${textMutedSmClass} pb-4`}>
+        <footer className={`text-center text-xs ${textMutedSmClass} pb-4 space-y-1`}>
           <p>Built for educators supporting neuro-divergent learners</p>
+          <p>
+            © <a href="https://coderra.je" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-500">Coderra.je</a> | Created and Designed by Dr Galan
+          </p>
         </footer>
       </div>
     </div>
