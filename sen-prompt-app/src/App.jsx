@@ -76,15 +76,14 @@ const READING_LEVELS = [
 
 const LANGUAGES = [
   { value: "", label: "English (default)" },
-  { value: "Welsh", label: "Welsh / Cymraeg" },
-  { value: "Spanish", label: "Spanish / Español" },
   { value: "French", label: "French / Français" },
+  { value: "Spanish", label: "Spanish / Español" },
+  { value: "Portuguese", label: "Portuguese / Português" },
+  { value: "Romanian", label: "Romanian / Română" },
+  { value: "Bulgarian", label: "Bulgarian / Български" },
   { value: "Polish", label: "Polish / Polski" },
-  { value: "Urdu", label: "Urdu / اردو" },
-  { value: "Punjabi", label: "Punjabi / ਪੰਜਾਬੀ" },
-  { value: "Bengali", label: "Bengali / বাংলা" },
-  { value: "Arabic", label: "Arabic / العربية" },
-  { value: "Simplified English", label: "Simplified English (EAL)" }
+  { value: "Italian", label: "Italian / Italiano" },
+  { value: "Afrikaans", label: "Afrikaans" }
 ];
 
 const QUESTION_TYPES = [
@@ -190,19 +189,26 @@ const ADAPTATION_MAP = ADAPTATIONS.reduce((acc, item) => {
 
 const STORAGE_KEY = "sen-prompt-history";
 const MAX_HISTORY = 10;
-const API_KEY_STORAGE = "sen-prompt-api-keys";
 
 const AI_PROVIDERS = [
   { id: "claude", name: "Claude (Anthropic)", model: "claude-sonnet-4-20250514" },
   { id: "gemini", name: "Gemini (Google)", model: "gemini-1.5-flash" }
 ];
 
-async function callClaudeAPI(apiKey, prompt) {
+// API keys from environment variables
+const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+async function callClaudeAPI(prompt) {
+  if (!CLAUDE_API_KEY) {
+    throw new Error("Claude API key not configured. Please set VITE_CLAUDE_API_KEY environment variable.");
+  }
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": apiKey,
+      "x-api-key": CLAUDE_API_KEY,
       "anthropic-version": "2023-06-01",
       "anthropic-dangerous-direct-browser-access": "true"
     },
@@ -222,9 +228,13 @@ async function callClaudeAPI(apiKey, prompt) {
   return data.content[0].text;
 }
 
-async function callGeminiAPI(apiKey, prompt) {
+async function callGeminiAPI(prompt) {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Gemini API key not configured. Please set VITE_GEMINI_API_KEY environment variable.");
+  }
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -264,13 +274,11 @@ export default function App() {
 
   // AI Provider state
   const [selectedProvider, setSelectedProvider] = useState("claude");
-  const [apiKeys, setApiKeys] = useState({ claude: "", gemini: "" });
-  const [showApiSettings, setShowApiSettings] = useState(false);
   const [aiResponse, setAiResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [aiError, setAiError] = useState("");
 
-  // Load history, dark mode preference, and API keys from localStorage
+  // Load history and dark mode preference from localStorage
   useEffect(() => {
     const savedHistory = localStorage.getItem(STORAGE_KEY);
     if (savedHistory) {
@@ -285,15 +293,6 @@ export default function App() {
     if (savedDarkMode) {
       setDarkMode(JSON.parse(savedDarkMode));
     }
-
-    const savedApiKeys = localStorage.getItem(API_KEY_STORAGE);
-    if (savedApiKeys) {
-      try {
-        setApiKeys(JSON.parse(savedApiKeys));
-      } catch (e) {
-        console.error("Failed to parse API keys:", e);
-      }
-    }
   }, []);
 
   // Save dark mode preference
@@ -301,22 +300,8 @@ export default function App() {
     localStorage.setItem("sen-prompt-dark-mode", JSON.stringify(darkMode));
   }, [darkMode]);
 
-  // Save API keys
-  const saveApiKey = (provider, key) => {
-    const newKeys = { ...apiKeys, [provider]: key };
-    setApiKeys(newKeys);
-    localStorage.setItem(API_KEY_STORAGE, JSON.stringify(newKeys));
-  };
-
   // Run prompt with selected AI provider
   const runPrompt = async () => {
-    const apiKey = apiKeys[selectedProvider];
-    if (!apiKey) {
-      setAiError(`Please set your ${selectedProvider === "claude" ? "Claude" : "Gemini"} API key in settings.`);
-      setShowApiSettings(true);
-      return;
-    }
-
     if (!prompt) {
       setAiError("Please generate a prompt first.");
       return;
@@ -329,9 +314,9 @@ export default function App() {
     try {
       let response;
       if (selectedProvider === "claude") {
-        response = await callClaudeAPI(apiKey, prompt);
+        response = await callClaudeAPI(prompt);
       } else {
-        response = await callGeminiAPI(apiKey, prompt);
+        response = await callGeminiAPI(prompt);
       }
       setAiResponse(response);
     } catch (error) {
@@ -585,13 +570,16 @@ export default function App() {
               along with your resource.
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowApiSettings(!showApiSettings)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
+          <div className="flex gap-2 items-center">
+            <select
+              value={selectedProvider}
+              onChange={(e) => setSelectedProvider(e.target.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${inputBgClass}`}
             >
-              API Settings
-            </button>
+              {AI_PROVIDERS.map((provider) => (
+                <option key={provider.id} value={provider.id}>{provider.name}</option>
+              ))}
+            </select>
             <button
               onClick={() => setShowHistory(!showHistory)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${borderClass} ${textClass} hover:bg-slate-200 dark:hover:bg-slate-700`}
@@ -607,86 +595,6 @@ export default function App() {
             </button>
           </div>
         </header>
-
-        {/* API Settings panel */}
-        {showApiSettings && (
-          <div className={`${cardClass} rounded-2xl shadow-md p-4 space-y-4`}>
-            <div className="flex justify-between items-center">
-              <h2 className={`text-lg font-semibold ${textClass}`}>AI Provider Settings</h2>
-              <button
-                onClick={() => setShowApiSettings(false)}
-                className={`text-xs ${textMutedClass} hover:text-red-600`}
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>Select AI Provider</label>
-                <div className={`flex gap-4 p-2 border rounded-xl ${inputBgMutedClass}`}>
-                  {AI_PROVIDERS.map((provider) => (
-                    <label key={provider.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="aiProvider"
-                        value={provider.id}
-                        checked={selectedProvider === provider.id}
-                        onChange={(e) => setSelectedProvider(e.target.value)}
-                      />
-                      <span className={textClass}>{provider.name}</span>
-                      {apiKeys[provider.id] && (
-                        <span className="text-green-600 text-xs ml-1">✓</span>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
-                  Claude API Key
-                </label>
-                <input
-                  type="password"
-                  className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
-                  placeholder="sk-ant-..."
-                  value={apiKeys.claude}
-                  onChange={(e) => saveApiKey("claude", e.target.value)}
-                />
-                <p className={`mt-1 text-xs ${textMutedSmClass}`}>
-                  Get your API key from{" "}
-                  <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                    console.anthropic.com
-                  </a>
-                </p>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
-                  Gemini API Key
-                </label>
-                <input
-                  type="password"
-                  className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
-                  placeholder="AIza..."
-                  value={apiKeys.gemini}
-                  onChange={(e) => saveApiKey("gemini", e.target.value)}
-                />
-                <p className={`mt-1 text-xs ${textMutedSmClass}`}>
-                  Get your API key from{" "}
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                    aistudio.google.com
-                  </a>
-                </p>
-              </div>
-
-              <p className={`text-xs ${textMutedSmClass} border-t ${borderClass} pt-3`}>
-                API keys are stored locally in your browser and never sent to our servers.
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* History panel */}
         {showHistory && (
