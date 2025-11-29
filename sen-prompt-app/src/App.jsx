@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const ADAPTATIONS = [
   { id: "use_icons", label: "Use icons to support key ideas" },
@@ -381,6 +383,8 @@ export default function App() {
   const [aiResponse, setAiResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const aiResponseRef = useRef(null);
 
   // Load history and dark mode preference from localStorage
   useEffect(() => {
@@ -797,6 +801,68 @@ export default function App() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+  };
+
+  const downloadAsPdf = async () => {
+    if (!aiResponse || !aiResponseRef.current) return;
+
+    setIsGeneratingPdf(true);
+
+    try {
+      const element = aiResponseRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: darkMode ? "#1e293b" : "#ffffff"
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10;
+
+      // Calculate if we need multiple pages
+      const scaledHeight = imgHeight * ratio * (pdfWidth / imgWidth);
+      const pageHeight = pdfHeight - 20;
+
+      if (scaledHeight <= pageHeight) {
+        // Single page
+        pdf.addImage(imgData, "PNG", imgX, imgY, pdfWidth - 20, (imgHeight * (pdfWidth - 20)) / imgWidth);
+      } else {
+        // Multiple pages
+        let heightLeft = scaledHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, "PNG", 10, imgY, pdfWidth - 20, scaledHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+          position = heightLeft - scaledHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, "PNG", 10, position + imgY, pdfWidth - 20, scaledHeight);
+          heightLeft -= pageHeight;
+        }
+      }
+
+      const filename = `${subject || "resource"}_${topic || "output"}_${new Date().toISOString().split("T")[0]}.pdf`;
+      pdf.save(filename.replace(/\s+/g, "_"));
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      setAiError("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -1382,11 +1448,18 @@ export default function App() {
               <h2 className={`text-lg font-semibold ${textClass}`}>
                 AI Response
                 <span className={`text-xs font-normal ${textMutedClass} ml-2`}>
-                  ({selectedProvider === "claude" ? "Claude" : "Gemini"})
+                  (Gemini)
                 </span>
               </h2>
               {aiResponse && (
                 <div className="flex gap-2">
+                  <button
+                    onClick={downloadAsPdf}
+                    disabled={isGeneratingPdf}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold text-white ${isGeneratingPdf ? "bg-emerald-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                  >
+                    {isGeneratingPdf ? "Generating PDF..." : "Download PDF"}
+                  </button>
                   <button
                     onClick={() => copyToClipboard(aiResponse)}
                     className={`px-3 py-1 rounded-lg text-[11px] font-semibold border ${borderClass} ${textClass} hover:bg-slate-100 dark:hover:bg-slate-700`}
@@ -1420,7 +1493,7 @@ export default function App() {
             )}
 
             {aiResponse && (
-              <div className={`p-4 border rounded-xl ${inputBgMutedClass} overflow-auto max-h-[500px]`}>
+              <div ref={aiResponseRef} className={`p-4 border rounded-xl ${inputBgMutedClass} overflow-auto max-h-[500px]`}>
                 <pre className={`text-sm whitespace-pre-wrap font-sans ${textClass}`}>{aiResponse}</pre>
               </div>
             )}
