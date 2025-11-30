@@ -90,7 +90,7 @@ const EXAM_BOARDS = [
   { value: "Edexcel", label: "Edexcel" }
 ];
 
-const EAL_BANDS = [
+const ML_BANDS = [
   {
     value: "A",
     label: "Band A - New to English",
@@ -488,11 +488,11 @@ export default function App() {
     }
 
     if (ealBand && motherTongue) {
-      const bandInfo = EAL_BANDS.find(b => b.value === ealBand);
+      const bandInfo = ML_BANDS.find(b => b.value === ealBand);
       const tongueInfo = MOTHER_TONGUES.find(t => t.value === motherTongue);
 
       if (bandInfo) {
-        adaptedPrompt += `\nEAL Learner (Bell Foundation ${bandInfo.label}):\n`;
+        adaptedPrompt += `\nML Learner (Bell Foundation ${bandInfo.label}):\n`;
         adaptedPrompt += `${bandInfo.guidance}\n`;
 
         if (tongueInfo) {
@@ -676,11 +676,11 @@ export default function App() {
 
     // EAL / Bell Foundation
     if (ealBand && motherTongue) {
-      const bandInfo = EAL_BANDS.find(b => b.value === ealBand);
+      const bandInfo = ML_BANDS.find(b => b.value === ealBand);
       const tongueInfo = MOTHER_TONGUES.find(t => t.value === motherTongue);
 
       if (bandInfo) {
-        adaptedPrompt += `\nEAL Learner (Bell Foundation ${bandInfo.label}):\n`;
+        adaptedPrompt += `\nML Learner (Bell Foundation ${bandInfo.label}):\n`;
         adaptedPrompt += `${bandInfo.guidance}\n`;
 
         if (tongueInfo) {
@@ -1470,12 +1470,12 @@ export default function App() {
                 </div>
               </div>
 
-              {/* EAL / Bell Foundation Section */}
+              {/* ML / Bell Foundation Section */}
               <div className={`p-3 border rounded-xl ${inputBgMutedClass}`}>
                 <div className="grid md:grid-cols-2 gap-3">
                   <div>
                     <label className={`block text-sm font-semibold mb-1 ${textClass}`}>
-                      EAL Proficiency (Bell Foundation)
+                      ML Proficiency (Bell Foundation)
                     </label>
                     <select
                       className={`w-full p-2 border rounded-xl text-sm ${inputBgClass}`}
@@ -1486,12 +1486,12 @@ export default function App() {
                       }}
                     >
                       <option value="">Not applicable</option>
-                      {EAL_BANDS.map((band) => (
+                      {ML_BANDS.map((band) => (
                         <option key={band.value} value={band.value}>{band.label}</option>
                       ))}
                     </select>
                     <p className={`mt-1 text-xs ${textMutedSmClass}`}>
-                      For multilingual learners - select EAL proficiency band.
+                      For multilingual learners - select ML proficiency band.
                     </p>
                   </div>
 
@@ -1511,13 +1511,13 @@ export default function App() {
                       ))}
                     </select>
                     <p className={`mt-1 text-xs ${textMutedSmClass}`}>
-                      {ealBand ? "Required when EAL band is selected." : "Select EAL band first."}
+                      {ealBand ? "Required when ML band is selected." : "Select ML band first."}
                     </p>
                   </div>
                 </div>
                 {ealBand && !motherTongue && (
                   <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                    Please select a mother tongue to include EAL support in the prompt.
+                    Please select a mother tongue to include ML support in the prompt.
                   </p>
                 )}
               </div>
@@ -1585,7 +1585,7 @@ The more context you provide, the better the output."
                     ))}
                   </select>
                   <p className={`mt-1 text-xs ${textMutedSmClass}`}>
-                    Translate output to another language or use simplified English for EAL students.
+                    Translate output to another language or use simplified English for ML students.
                   </p>
                 </div>
               </div>
